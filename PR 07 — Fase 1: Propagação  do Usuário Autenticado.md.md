@@ -1,438 +1,364 @@
-# 🔐 PR 07 — Fase 1: Propagação do Usuário Autenticado no Módulo de Ingestion
-## Uso inicial do `request.user.id` no primeiro fluxo real da API de IA
+# 🔐 PR 07 — Fase 1: Propagação do Usuário Autenticado
+## Primeiro uso real da identidade autenticada no domínio
 
 ---
 
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-07-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-propagação%20de%20identidade-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Tipo](https://img.shields.io/badge/tipo-propaga%C3%A7%C3%A3o%20de%20identidade-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-userId%20em%20ingestion-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/status-proposto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-primeiro%20uso%20real%20do%20auth-0891b2?style=for-the-badge&logo=shield&logoColor=white)
+![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 ---
 
-## Sumário
-
-- [1. Síntese executiva](#1-síntese-executiva)
-- [2. Por que o módulo de ingestion](#2-por-que-o-módulo-de-ingestion)
-- [3. Contexto e objetivo](#3-contexto-e-objetivo)
-- [4. Decisão arquitetural](#4-decisão-arquitetural)
-- [5. Escopo e fora de escopo](#5-escopo-e-fora-de-escopo)
-- [6. Estratégia técnica](#6-estratégia-técnica)
-- [7. Estrutura técnica](#7-estrutura-técnica)
-- [8. Fluxo do request autenticado em ingestion](#8-fluxo-do-request-autenticado-em-ingestion)
-- [9. Responsabilidades por arquivo](#9-responsabilidades-por-arquivo)
-- [10. Contratos mínimos](#10-contratos-mínimos)
-- [11. Regras de simplicidade aplicadas](#11-regras-de-simplicidade-aplicadas)
-- [12. Segurança e rastreabilidade](#12-segurança-e-rastreabilidade)
-- [13. Critérios de aceite](#13-critérios-de-aceite)
-- [14. Conclusão](#14-conclusão)
-
----
-
 > [!IMPORTANT]
-> Este PR não expande o slice de auth.
+> Este PR **não evolui o módulo de auth**.
 >
-> Este PR consome a foundation já validada no PR 06 para:
+> Ele apenas aplica a foundation da **PR 06** no primeiro caso de uso real:
 >
-> - aplicar `AuthGuard` ao primeiro endpoint funcional real da aplicação;
-> - propagar `request.user.id` para o módulo de `ingestion`;
-> - registrar o `userId` como dado mínimo de rastreabilidade do início do fluxo;
-> - validar, na prática, o uso do auth delegado fora da rota técnica de health.
+> - proteger o primeiro endpoint funcional de `ingestion`
+> - consumir `request.user.id`
+> - propagar `userId` explicitamente até a camada de serviço
+> - registrar **quem iniciou a operação**
 >
-> Este PR **não** implementa roles/scopes, decorators de usuário atual, request context genérico, cache de introspecção ou enriquecimento adicional de identidade.
+> O objetivo é validar o primeiro uso real da identidade autenticada **sem abstração prematura**.
 
 ---
 
-## 1. Síntese executiva
+## 1. Sumário
 
-O PR 06 estabeleceu a foundation mínima do auth delegado:
-
-- bearer token recebido na borda HTTP;
-- introspecção remota via `GET /api/v1/profile`;
-- preservação do contrato externo relevante;
-- validação local do `id`;
-- anexação de `request.user.id`.
-
-O próximo passo natural não é sofisticar auth.
-
-O próximo passo é **usar essa identidade autenticada no primeiro fluxo real da aplicação**.
-
-O módulo escolhido para esse recorte é `ingestion`, porque ele representa o ponto inicial do pipeline: a entrada de uma nova operação na plataforma. É o lugar mais natural para começar a propagar o ator autenticado de forma explícita e auditável.
-
-### Resultado esperado
-
-- o primeiro endpoint funcional do módulo de `ingestion` passa a ser protegido por `AuthGuard`;
-- o `userId` autenticado deixa de existir apenas em rota técnica;
-- a camada de serviço recebe explicitamente o identificador do usuário autenticado;
-- o início do fluxo passa a registrar quem solicitou a operação;
-- o recorte continua pequeno, direto e revisável.
-
-```text
-PR 06 autenticou.
-PR 07 começa a usar a autenticação.
-O userId autenticado entra em ingestion.
-O início do fluxo ganha rastreabilidade mínima.
-Sem expandir auth além do necessário.
-```
+- [1. Sumário](#1-sumário)
+- [2. Síntese Executiva](#2-síntese-executiva)
+- [3. Decisão Arquitetural](#3-decisão-arquitetural)
+- [4. Por que `ingestion` agora?](#4-por-que-ingestion-agora)
+- [5. Escopo](#5-escopo)
+- [6. Fora de Escopo](#6-fora-de-escopo)
+- [7. Fluxo Arquitetural](#7-fluxo-arquitetural)
+- [8. Estrutura Proposta](#8-estrutura-proposta)
+- [9. Boundary e Propagação](#9-boundary-e-propagação)
+- [10. Regras de Implementação](#10-regras-de-implementação)
+- [11. Critérios de Review](#11-critérios-de-review)
+- [12. Critérios de Aceite](#12-critérios-de-aceite)
+- [13. Conclusão](#13-conclusão)
 
 ---
 
-## 2. Por que o módulo de ingestion
+## 2. Síntese Executiva
 
-O módulo de `ingestion` é o melhor ponto para essa propagação inicial por quatro motivos:
+A **PR 06** resolveu a foundation mínima do auth delegado:
 
-### 2.1 É o início natural do fluxo
+- receber `Authorization: Bearer <token>`
+- consultar a identidade administrativa na API principal
+- validar o usuário autenticado
+- expor localmente apenas `request.user.id`
 
-`ingestion` representa a entrada do material/processo que será tratado pela plataforma. É o primeiro lugar onde faz sentido registrar quem iniciou a operação.
+Com essa foundation pronta, o próximo passo correto não é expandir auth.
 
-### 2.2 Gera valor imediato de rastreabilidade
+O próximo passo correto é **usar essa identidade em um fluxo real da aplicação**.
 
-Assim que um request autenticado cria ou inicia uma operação de ingestion, o sistema já passa a saber:
+Este PR propõe exatamente isso:
 
-- quem iniciou;
-- quando iniciou;
-- qual operação foi aberta.
-
-Isso gera valor concreto sem precisar expandir o módulo de auth.
-
-### 2.3 Evita abstração prematura
-
-Propagar `userId` em `ingestion` permite validar o uso real da identity foundation sem criar:
-
-- request context global;
-- decorator de current user;
-- estrutura genérica para todos os módulos;
-- solução preparada para múltiplos cenários ainda inexistentes.
-
-### 2.4 Está alinhado com a arquitetura do projeto IA
-
-Pelo desenho macro já consolidado, `ingestion` é um dos primeiros módulos do pipeline e um candidato natural para iniciar rastreabilidade do ator autenticado.
-
-> [!NOTE]
-> O objetivo deste PR não é fechar todo o pipeline de ingestion.
->
-> O objetivo é apenas fazer o primeiro uso real do `userId` autenticado dentro de um domínio funcional da aplicação.
+- aplicar `AuthGuard` no primeiro endpoint funcional de `ingestion`
+- ler `request.user.id` no controller
+- propagar `userId` explicitamente ao service
+- persistir **quem iniciou a operação**
 
 ---
 
-## 3. Contexto e objetivo
+## 3. Decisão Arquitetural
 
-Após a foundation do auth delegado, o próximo ganho arquitetural não é adicionar mais capacidade ao auth.
-O próximo ganho é **colocar o auth para gerar valor real no fluxo da aplicação**.
+A decisão deste PR é simples:
 
-Hoje já existe capacidade para resolver:
+> **PR 06 autentica a borda.  
+> PR 07 faz a identidade autenticada atravessar o primeiro boundary de domínio.**
 
-- quem é o usuário autenticado;
-- se o token é válido;
-- se a request deve ser bloqueada ou permitida.
+A intenção aqui não é criar uma solução transversal de identidade.
 
-O que ainda falta é:
-
-- usar esse `userId` em um caso real de uso;
-- garantir rastreabilidade mínima do ator autenticado;
-- provar que a borda HTTP autenticada já se conecta ao fluxo da aplicação.
-
-### Objetivo deste PR
-
-Estabelecer o primeiro uso concreto do `request.user.id` no módulo de `ingestion`, preservando:
-
-- simplicidade;
-- recorte mínimo;
-- controller fino;
-- service direto;
-- ausência de expansão prematura do auth.
-
----
-
-## 4. Decisão arquitetural
-
-### Decisão central
-
-**Consumir o auth delegado já resolvido para propagar `userId` ao primeiro fluxo protegido do módulo de ingestion.**
-
-### Regra implementada
-
-```text
-A borda HTTP continua autenticando via AuthGuard.
-O controller de ingestion recebe request.user.id.
-O service de ingestion recebe userId como dado explícito.
-O fluxo registra o ator autenticado na abertura da operação.
-O auth não é expandido além do necessário.
-```
-
-> [!IMPORTANT]
-> Este PR não reabre discussão sobre contrato externo, introspecção, roles ou scopes.
->
-> O foco aqui é validar o uso do auth já resolvido em um fluxo real, pequeno e auditável de `ingestion`.
-
----
-
-## 5. Escopo e fora de escopo
-
-### Escopo deste PR
-
-- criar ou proteger o primeiro endpoint funcional de `ingestion`;
-- aplicar `AuthGuard` a esse endpoint;
-- ler `request.user.id` no controller;
-- propagar `userId` do controller para o service;
-- persistir ou registrar esse `userId` no estado mínimo da operação de ingestion;
-- manter controller fino e service simples;
-- preservar o recorte mínimo e aderente ao padrão do projeto.
-
-### Fora de escopo neste PR
-
-- fechar o pipeline completo de ingestion;
-- orquestração assíncrona completa;
-- jobs, filas ou BullMQ;
-- processing, extraction, classification ou publication;
-- roles/scopes;
-- decorators customizados para current user;
-- request context global;
-- cache de introspecção;
-- observabilidade expandida do slice;
-- qualquer reestruturação paralela no módulo de auth.
-
----
-
-## 6. Estratégia técnica
-
-A estratégia do recorte é simples:
-
-1. manter a foundation do auth intacta;
-2. introduzir o primeiro endpoint real de `ingestion`;
-3. proteger esse endpoint com `AuthGuard`;
-4. receber `userId` autenticado no controller;
-5. repassar `userId` ao service como dado explícito;
-6. registrar o ator autenticado no estado mínimo da operação.
-
-### Forma esperada do fluxo
-
-- request autenticada entra na API;
-- `AuthGuard` resolve `request.user.id`;
-- controller de `ingestion` recebe payload + `userId`;
-- service de `ingestion` cria/inicia a operação;
-- o estado mínimo registra quem iniciou a operação.
+A intenção é validar o primeiro uso real da foundation já entregue.
 
 ### Princípio aplicado
 
-```text
-Não expandir auth.
-Usar auth.
-Não criar abstração nova.
-Propagar userId de forma direta.
-Não generalizar antes do segundo caso real.
-```
+- **usar antes de abstrair**
+- **validar antes de generalizar**
+- **persistir o mínimo necessário**
+- **não sofisticar antes do segundo caso real**
 
 ---
 
-## 7. Estrutura técnica
+## 4. Por que `ingestion` agora?
 
-### Estrutura esperada do recorte
+`Ingestion` é o melhor módulo para iniciar essa propagação porque ele representa o **ponto de entrada operacional do pipeline**.
 
-```text
-src/
-├── modules/
-│   ├── auth/
-│   │   └── ...
-│   └── ingestion/
-│       ├── infra/
-│       │   ├── controllers/
-│       │   │   └── ingestion.controller.ts
-│       │   └── services/
-│       │       └── ingestion.service.ts
-│       ├── model/
-│       │   └── ...
-│       └── ingestion.module.ts
-```
+É nesse boundary que a aplicação:
 
-### Leitura da estrutura
+- recebe uma requisição autenticada
+- abre uma operação
+- associa essa operação a quem a iniciou
 
-- `AuthGuard` continua no módulo de auth;
-- `ingestion` consome apenas `request.user.id`;
-- o controller delega ao service;
-- o service recebe `userId` como argumento simples;
-- o fluxo passa a ter rastreabilidade mínima sem inflar o desenho.
+Portanto, `ingestion` é o lugar mais natural para introduzir o primeiro uso real de `request.user.id`.
 
-> [!TIP]
-> O segundo uso real de identidade é o melhor momento para avaliar qualquer abstração adicional.
+### O que isso valida
+
+- que a identidade autenticada resolvida na borda é útil no domínio
+- que o pipeline nasce com autoria mínima registrada
+- que a propagação de identidade pode acontecer sem request context global
+- que o service pode receber apenas `userId`, sem acoplamento ao request
+
+### Por que não outro módulo?
+
+| Módulo | Motivo para não iniciar por ele |
+|---|---|
+| `processing` | já pressupõe uma operação iniciada |
+| `extraction` | já é etapa interna |
+| `classification` | não é boundary de entrada |
+| `publication` | ocorre depois no fluxo |
+| `auth` | já foi tratado na PR 06 |
+
+**Conclusão:**  
+Se a intenção é validar o primeiro uso real da identidade autenticada, `ingestion` é o boundary correto.
+
+---
+
+## 5. Escopo
+
+Este PR inclui:
+
+- proteção do primeiro endpoint funcional de `ingestion` com `AuthGuard`
+- leitura de `request.user.id` no controller
+- propagação explícita de `userId` ao service
+- persistência mínima da autoria da abertura da operação
+
+---
+
+## 6. Fora de Escopo
+
+Este PR **não** inclui:
+
+- `CurrentUser` decorator
+- request context global
+- abstração genérica de propagation de identidade
+- roles/scopes locais
+- enriquecimento de `request.user`
+- expansão do contrato interno de usuário
+- pipeline completo
+- BullMQ
+- processing assíncrono
+- extraction
+- classification
+- quality
+- publication
+- audit completo
+- solução transversal entre múltiplos módulos
+
+> [!NOTE]
+> A regra aqui é objetiva:
 >
-> Neste PR, a prioridade é manter tudo explícito, pequeno e revisável.
+> **não generalizar antes do segundo caso real.**
 
 ---
 
-## 8. Fluxo do request autenticado em ingestion
+## 7. Fluxo Arquitetural
 
 ```mermaid
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "background": "#090d1a",
+    "background": "#0b1220",
     "primaryColor": "#111827",
-    "primaryTextColor": "#f8fafc",
-    "primaryBorderColor": "#a78bfa",
+    "primaryTextColor": "#e5f7ff",
+    "primaryBorderColor": "#22d3ee",
     "lineColor": "#38bdf8",
     "secondaryColor": "#0f172a",
-    "secondaryTextColor": "#f9a8d4",
-    "secondaryBorderColor": "#ec4899",
     "tertiaryColor": "#111827",
-    "tertiaryTextColor": "#86efac",
-    "tertiaryBorderColor": "#22c55e",
-    "fontFamily": "Inter, Segoe UI, Arial"
+    "fontFamily": "Inter, Segoe UI, Arial",
+    "clusterBkg": "#0f172a",
+    "clusterBorder": "#22d3ee",
+    "nodeBorder": "#22d3ee",
+    "mainBkg": "#111827"
   }
 }}%%
-flowchart TD
-    A["🧑‍💼 Request de ingestion com bearer"] --> B["🛡️ AuthGuard"]
-    B --> C["👤 request.user.id"]
-    C --> D["🎯 IngestionController"]
-    D --> E["⚙️ IngestionService"]
-    E --> F["📝 Registro mínimo de initiatedByUserId"]
-    F --> G["✅ Operação de ingestion iniciada"]
 
-    style G fill:#071910,stroke:#22c55e,stroke-width:2px,color:#dcfce7
+flowchart LR
+    A[HTTP Request<br/>Authorization Bearer] --> B[AuthGuard]
+    B --> C[request.user.id]
+    C --> D[IngestionController]
+    D --> E[IngestionService]
+    E --> F[Create Operation]
+    F --> G[Persist initiatedByUserId]
+
+    classDef cyan fill:#0f172a,stroke:#22d3ee,color:#e0f7ff,stroke-width:1.5px;
+    classDef violet fill:#111827,stroke:#a78bfa,color:#f3e8ff,stroke-width:1.5px;
+    classDef green fill:#052e16,stroke:#22c55e,color:#dcfce7,stroke-width:1.5px;
+
+    class A,B,C,D cyan;
+    class E,F violet;
+    class G green;
 ```
 
 ---
 
-## 9. Responsabilidades por arquivo
+## 8. Estrutura Proposta
 
-### `src/modules/auth/...`
-
-Continua responsável por:
-
-- autenticar a request;
-- resolver `request.user.id`;
-- bloquear requests inválidas.
-
-### `src/modules/ingestion/infra/controllers/ingestion.controller.ts`
-
-Responsável por:
-
-- receber a request protegida;
-- ler `request.user.id`;
-- delegar o fluxo ao service.
-
-### `src/modules/ingestion/infra/services/ingestion.service.ts`
-
-Responsável por:
-
-- receber o `userId`;
-- executar a regra mínima de abertura da operação;
-- registrar o ator autenticado no estado mínimo do fluxo.
-
-### `src/modules/ingestion/ingestion.module.ts`
-
-Responsável por:
-
-- compor controller e service de ingestion;
-- importar o módulo necessário para uso de `AuthGuard`.
+```text
+src/
+└── modules/
+    ├── auth/
+    │   ├── auth.module.ts
+    │   ├── infra/
+    │   │   ├── clients/
+    │   │   │   └── auth-api.client.ts
+    │   │   ├── guards/
+    │   │   │   └── auth.guard.ts
+    │   │   └── services/
+    │   │       └── auth.service.ts
+    │   └── model/
+    │       └── v1/
+    │           └── auth.contracts.ts
+    │
+    └── ingestion/
+        ├── ingestion.module.ts
+        ├── infra/
+        │   ├── controllers/
+        │   │   └── ingestion.controller.ts
+        │   └── services/
+        │       └── ingestion.service.ts
+        └── model/
+            └── ingestion.types.ts
+```
 
 ---
 
-## 10. Contratos mínimos
+## 9. Boundary e Propagação
 
-Este PR não amplia o contrato de auth.
+### Controller
 
-O único contrato adicional relevante do recorte é o input mínimo de `ingestion` com propagação explícita de `userId`.
-
-### Exemplo de forma esperada
+O controller recebe a request já autenticada e usa apenas o dado necessário:
 
 ```ts
-export type CreateIngestionInput = {
-  userId: number;
-  // demais campos mínimos reais do fluxo
-};
+request.user.id
 ```
 
-### Exemplo de estado mínimo esperado
+### Propagação proposta
 
 ```ts
-export type IngestionRecord = {
+@Post()
+@UseGuards(AuthGuard)
+create(@Req() request: Request) {
+  return this.ingestionService.create({
+    userId: request.user.id,
+  });
+}
+```
+
+### Service
+
+O service não deve conhecer a request HTTP.
+
+Ele deve receber apenas o dado necessário:
+
+```ts
+create(input: { userId: number }) {
+  // create operation with initiatedByUserId
+}
+```
+
+### Estado mínimo esperado
+
+```ts
+{
   id: string;
+  status: 'created';
   initiatedByUserId: number;
-  // demais campos mínimos reais do fluxo
-};
+  createdAt: Date;
+}
 ```
 
 > [!IMPORTANT]
-> O objetivo aqui não é criar um request context genérico nem uma abstração para identidade.
+> Este PR não tenta modelar o fluxo completo.
 >
-> O objetivo é propagar `userId` de forma simples e explícita no primeiro caso real do pipeline.
+> Ele só garante que a identidade autenticada entre corretamente no domínio.
 
 ---
 
-## 11. Regras de simplicidade aplicadas
+## 10. Regras de Implementação
 
-Este PR deve seguir as mesmas regras consolidadas no slice anterior:
+### Controller
 
-- não criar decorators de current user;
-- não criar helpers sem reuso real;
-- não criar abstração para “contexto autenticado”;
-- não introduzir camadas novas sem necessidade;
-- manter controller fino;
-- manter service simples;
-- propagar `userId` como argumento explícito;
-- evitar antecipação de extensões futuras.
+- deve permanecer fino
+- lê `request.user.id`
+- delega ao service
+- não concentra regra de domínio
 
-### Regra de ouro do recorte
+### Service
 
-```text
-Primeiro uso real.
-Menor solução correta.
-Sem generalização antes da hora.
-```
+- recebe `userId` explicitamente
+- inicia a operação
+- registra autoria mínima
 
----
+### Auth
 
-## 12. Segurança e rastreabilidade
+- permanece isolado no módulo de auth
+- não deve ser reestruturado neste PR
+- não deve ser expandido para roles/scopes/decorators
 
-### Segurança preservada
+### Princípios
 
-- requests sem bearer continuam bloqueadas;
-- requests com token inválido continuam bloqueadas;
-- o fluxo funcional só executa após autenticação válida.
-
-### Rastreabilidade mínima adicionada
-
-- o `userId` autenticado passa a compor o estado da operação de ingestion;
-- a aplicação passa a saber quem iniciou a operação;
-- o recorte já abre caminho para auditoria básica futura sem inflar a foundation.
+- simplicidade
+- clareza
+- baixo acoplamento
+- sem abstração prematura
+- implementação pequena e revisável
 
 ---
 
-## 13. Critérios de aceite
+## 11. Critérios de Review
 
-### Funcionais
+O review deste PR deve validar se:
 
-- o primeiro endpoint de `ingestion` deve exigir autenticação válida;
-- o controller deve receber `request.user.id`;
-- o service deve receber `userId` explicitamente;
-- o fluxo deve registrar o ator autenticado no estado mínimo da operação;
-- requests inválidas devem continuar bloqueadas pelo `AuthGuard`.
-
-### Arquiteturais
-
-- o PR não deve expandir o módulo de auth além do necessário;
-- `ingestion` deve consumir a foundation existente, não reimplementá-la;
-- o código deve permanecer simples, direto e aderente ao padrão do projeto;
-- não deve haver abstração prematura para identidade ou request context.
+- a continuidade com a PR 06 está clara
+- a escolha de `ingestion` como primeiro boundary faz sentido
+- `request.user.id` está sendo usado de forma mínima e correta
+- o controller continua fino
+- o service recebe `userId` explicitamente
+- a persistência mínima de autoria está correta
+- não houve expansão indevida de escopo
+- não surgiram abstrações novas sem segundo caso real
 
 ---
 
-## 14. Conclusão
+## 12. Critérios de Aceite
 
-Este PR representa o próximo passo correto após a foundation do auth delegado:
+Este PR pode ser considerado aceito se:
 
-**tirar o `userId` autenticado da rota técnica e colocá-lo no primeiro fluxo funcional real da aplicação, começando pelo módulo de ingestion.**
+- [ ] o endpoint de `ingestion` estiver protegido por `AuthGuard`
+- [ ] `request.user.id` estiver acessível no controller
+- [ ] `userId` for propagado explicitamente ao service
+- [ ] a operação criada registrar `initiatedByUserId`
+- [ ] não houver abstração prematura
+- [ ] não houver expansão indevida do auth
+- [ ] o recorte permanecer pequeno, funcional e revisável
 
-### Síntese final
+---
 
-O auth delegado continua simples.  
-A autenticação já validada passa a ser usada de forma concreta.  
-O `userId` autenticado entra em ingestion.  
-A aplicação ganha rastreabilidade mínima desde o início do fluxo.  
-Sem expandir auth além do que a fase atual precisa.
+## 13. Conclusão
+
+Este PR é a continuação direta da PR 06.
+
+Ele não tenta sofisticar a foundation.
+
+Ele apenas valida o primeiro uso real da identidade autenticada no domínio.
+
+A escolha de `ingestion` é intencional porque ele é:
+
+- o ponto de entrada do pipeline
+- o lugar onde a operação nasce
+- o boundary mais natural para registrar autoria mínima
+
+Em resumo:
+
+> **PR 06 autenticou a borda.  
+> PR 07 começa a conectar essa identidade ao fluxo real da aplicação.**
