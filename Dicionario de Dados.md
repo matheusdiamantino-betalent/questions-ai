@@ -1556,30 +1556,3 @@ Este banco modela uma plataforma com quatro núcleos fortemente conectados:
 | `questions` | ativo central de prática e avaliação |
 | `mock_exams` | consolidação de avaliação estruturada |
 
-## 11.3 Valor deste material
-
-Este documento serve como base para:
-
-- onboarding técnico
-- leitura de legado
-- planejamento de integração
-- desenho de APIs
-- refatoração de domínio
-- modularização futura
-- descoberta de constraints ausentes
-- preparação para documentação arquitetural mais profunda
-
-> [!TIP]
-> Evolução natural deste material:
->
-> **V2 — Data Dictionary Arquitetural**
->
-> com:
->
-> - matriz de índices sugeridos
-> - constraints únicas prováveis
-> - chaves compostas candidatas
-> - risco de duplicidade por pivot
-> - mapa de bounded contexts
-> - proposta de modularização por domínio
-> - visão de agregados e entidades raiz
