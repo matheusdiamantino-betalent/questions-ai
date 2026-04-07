@@ -220,7 +220,8 @@ src/
         │   └── services/
         │       └── ingestion.service.ts
         └── model/
-            └── ingestion.types.ts
+            └── v1/
+                └── ingestion.types.ts
 ```
 
 ---
