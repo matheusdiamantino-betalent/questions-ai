@@ -8,8 +8,8 @@
 ![PR](https://img.shields.io/badge/PR-09-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-redis%20%2B%20database%20foundation-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-redis%20%2B%20ingestion%20table-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/status-pronto%20para%20discussion-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-redis%20%2B%20ingestion%20persistence-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
@@ -54,37 +54,38 @@ A progressão arquitetural da Fase 1 até aqui foi:
 
 - **PR 06** → autenticação delegada mínima
 - **PR 07** → propagação do usuário autenticado até o domínio de `ingestion`
-- **PR 08** → materialização do estado inicial mínimo da operação no domínio
+- **PR 08** → persistência mínima inicial da operação de `ingestion`
 
 A lacuna que permanece depois dessas três PRs é objetiva:
 
-> a operação já nasce com shape correto no domínio, mas ainda não existe como estado operacional real persistido.
+> a aplicação já autentica na borda, já propaga a identidade e já abre a operação inicial, mas ainda não possui foundation mínima de infraestrutura compartilhada suficientemente clara para sustentar o próximo passo operacional da fase.
 
-A **PR 09** propõe fechar exatamente esse gap, sem inflar a arquitetura:
+A **PR 09** fecha exatamente esse gap, sem inflar a arquitetura:
 
-- introduzir a foundation mínima de **Redis**
-- consolidar a foundation mínima de **database access**
-- persistir a primeira operação real de `ingestion`
+- introduz a foundation mínima de **Redis**
+- consolida a foundation mínima de **database access**
+- preserva a persistência inicial real da operação de `ingestion` sobre uma base compartilhada mais explícita
 
 O foco desta PR **não é** resolver o pipeline completo.
 
-O foco é apenas garantir que a aplicação passe a ter:
+O foco é garantir que a aplicação passe a ter:
 
 - conectividade de infraestrutura compartilhada
-- estado operacional mínimo persistido
-- base concreta para os próximos slices
+- base mínima reutilizável para estado operacional
+- persistência inicial real aderente ao recorte
+- preparação estrutural imediata para os próximos slices, sem antecipar comportamento futuro
 
 ---
 
 ## 2. Objetivo do PR
 
-Introduzir a foundation mínima de infraestrutura compartilhada necessária para que a aplicação deixe de operar apenas em memória nos pontos iniciais do fluxo.
+Introduzir a foundation mínima de infraestrutura compartilhada necessária para sustentar o primeiro estado operacional real da aplicação.
 
 ### Em termos práticos, esta PR deve permitir
 
 - centralizar o acesso ao **Redis**
-- centralizar o acesso ao **banco operacional**
-- persistir a primeira operação de `ingestion`
+- consolidar o acesso ao **banco operacional**
+- manter a persistência real da operação inicial de `ingestion`
 - preservar o vínculo com o usuário autenticado que iniciou a operação
 
 ### Resultado esperado
@@ -92,8 +93,9 @@ Introduzir a foundation mínima de infraestrutura compartilhada necessária para
 Ao final desta PR, a aplicação deve ser capaz de:
 
 - subir com a infra mínima de Redis estruturada
-- acessar o banco operacional via foundation compartilhada
-- criar e persistir uma operação de `ingestion` com estado inicial mínimo
+- acessar o banco operacional por meio de foundation compartilhada
+- persistir a operação inicial de `ingestion` com estado mínimo consistente
+- manter `initiatedByUserId` como metadado operacional explícito
 
 ---
 
@@ -101,13 +103,14 @@ Ao final desta PR, a aplicação deve ser capaz de:
 
 A decisão central desta PR é:
 
-> **conectar e persistir antes de orquestrar.**
+> **conectar e consolidar antes de orquestrar.**
 
 Isso significa:
 
-- primeiro estruturar a base de conectividade compartilhada
-- depois persistir o estado mínimo real da operação
-- sem antecipar fila, jobs, steps ou pipeline completo
+- primeiro estruturar a base mínima de conectividade compartilhada
+- consolidar o acesso às dependências operacionais reais
+- manter a persistência inicial simples e explícita
+- sem antecipar fila, jobs, steps, coordenação distribuída ou pipeline completo
 
 ### A arquitetura-base permanece a mesma
 
@@ -135,8 +138,8 @@ Esta PR inclui:
 
 - foundation mínima de **Redis**
 - foundation mínima de **database access**
-- primeira tabela operacional mínima de `ingestion`
-- persistência real do estado inicial da operação
+- consolidação da tabela operacional mínima de `ingestion`
+- manutenção da persistência real do estado inicial da operação
 - manutenção explícita de `initiatedByUserId`
 
 ### Em termos de implementação
@@ -144,10 +147,10 @@ Esta PR inclui:
 Espera-se que esta PR cubra:
 
 - config centralizada de Redis no `environment.ts`
-- client ou service mínimo de Redis em `shared/infra`
+- módulo e service mínimo de Redis em `shared/infra`
 - consolidação do acesso ao banco em `shared/infra/database`
-- persistência da operação inicial de `ingestion`
-- integração dessa persistência ao `IngestionService`
+- alinhamento da persistência inicial de `ingestion` ao novo ponto compartilhado de acesso
+- preservação do contrato mínimo já validado nas PRs anteriores
 
 ---
 
@@ -209,7 +212,7 @@ flowchart LR
     D --> E[IngestionService]:::service
     E --> F[Create Initial Operation State]:::domain
     F --> G[Persist Ingestion Record]:::database
-    F --> H[Prepare Runtime Coordination]:::redis
+    E -. foundation available .-> H[Redis Module / Redis Service]:::redis
 
     classDef http fill:#111827,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
     classDef auth fill:#111827,stroke:#a78bfa,color:#f5f3ff,stroke-width:2px;
@@ -219,6 +222,11 @@ flowchart LR
     classDef database fill:#052e16,stroke:#22c55e,color:#f0fdf4,stroke-width:2px;
     classDef redis fill:#451a03,stroke:#f59e0b,color:#fff7ed,stroke-width:2px;
 ```
+
+> [!IMPORTANT]
+> Neste recorte, o Redis entra como **foundation mínima de infraestrutura compartilhada**.
+>
+> Ele **não precisa participar ainda do comportamento funcional do fluxo de ingestion** além da disponibilização da base de conectividade para os próximos slices.
 
 ---
 
@@ -272,24 +280,27 @@ src/
 ### Papel de cada parte
 
 #### `shared/config/environment.ts`
+
 Responsável por centralizar as variáveis de ambiente necessárias para:
 
 - Redis
 - banco operacional
-- eventuais acessos mínimos previstos para a Fase 1
+- acessos mínimos previstos para a Fase 1
 
 #### `shared/infra/database`
+
 Responsável por:
 
 - concentrar a conexão com o banco operacional
-- expor o client já aderente ao padrão do projeto
-- servir como ponto único de acesso para persistência operacional
+- expor o client aderente ao padrão do projeto
+- servir como ponto único de acesso para persistência operacional mínima
 
 #### `shared/infra/redis`
+
 Responsável por:
 
 - centralizar o acesso ao Redis
-- expor client/service mínimo
+- expor module/service mínimo
 - evitar múltiplos pontos soltos de conexão ao longo da aplicação
 
 ---
@@ -308,7 +319,7 @@ Esta tabela representa a abertura mínima de uma operação de `ingestion`.
 |---|---|---|
 | `id` | UUID / string | Identificador da operação |
 | `status` | string | Estado inicial da operação |
-| `initiated_by_user_id` | integer / bigint | Usuário autenticado que iniciou |
+| `initiated_by_user_id` | integer | Usuário autenticado que iniciou |
 | `payload` | JSON / JSONB | Payload bruto recebido na abertura |
 | `created_at` | timestamp | Momento de criação |
 | `updated_at` | timestamp | Momento da última atualização |
@@ -394,7 +405,7 @@ Porque tudo isso reabriria uma decisão que já foi encerrada na PR 06.
 
 ### Contratos de domínio
 
-Os contratos de domínio continuam mínimos e alinhados ao que já foi introduzido na PR 08.
+Os contratos de domínio continuam mínimos e alinhados ao que já foi introduzido nas PRs 07 e 08.
 
 ```ts
 export type CreateIngestionInput = {
@@ -452,7 +463,7 @@ O `IngestionService` deve:
 
 - continuar simples
 - continuar recebendo dados explícitos
-- passar a persistir o estado inicial da operação
+- persistir o estado inicial da operação
 - não absorver infraestrutura futura desnecessária
 
 ### Configuração
@@ -502,13 +513,13 @@ A PR 09 não tenta resolver o pipeline completo nem reabrir decisões já consol
 
 Ela apenas introduz o próximo passo correto depois das PRs 06, 07 e 08:
 
-> **se a borda já autentica, a identidade já propaga e o domínio já materializa o estado inicial, agora a aplicação precisa da foundation mínima de infraestrutura e da primeira persistência real da operação.**
+> **se a borda já autentica, a identidade já propaga, a operação inicial já pode ser persistida e a aplicação agora precisa consolidar sua foundation mínima de infraestrutura compartilhada para sustentar os próximos slices.**
 
 Em resumo:
 
 - **PR 06** autenticou a borda
 - **PR 07** propagou a identidade
-- **PR 08** materializou o estado inicial mínimo
-- **PR 09** introduz Redis, database access e a primeira persistência real de `ingestion`
+- **PR 08** estabeleceu a persistência inicial mínima
+- **PR 09** consolida Redis, database access e a base compartilhada da persistência operacional
 
-Esta PR, portanto, abre o primeiro estado operacional real da Fase 1 — ainda pequeno, explícito, incremental e sem overengineering.
+Esta PR, portanto, abre o primeiro recorte claro de infraestrutura compartilhada da Fase 1 — ainda pequeno, explícito, incremental e sem overengineering.
