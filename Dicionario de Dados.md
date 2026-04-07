@@ -2,11 +2,11 @@
 
 <div align="left">
 
-![Banco](https://img.shields.io/badge/Banco-MySQL%20%2F%20Adonis-111827?style=for-the-badge&logo=mysql&logoColor=00e5ff)
-![Documento](https://img.shields.io/badge/Documento-Dicion%C3%A1rio%20de%20Dados-0f172a?style=for-the-badge&logo=readme&logoColor=22d3ee)
+![Banco](https://img.shields.io/badge/Banco-MySQL%20%2F%20Adonis-0f172a?style=for-the-badge&logo=mysql&logoColor=38bdf8)
+![Documento](https://img.shields.io/badge/Documento-Dicion%C3%A1rio%20de%20Dados-111827?style=for-the-badge&logo=bookstack&logoColor=22d3ee)
 ![Escopo](https://img.shields.io/badge/Escopo-Modelo%20L%C3%B3gico%20e%20Funcional-111827?style=for-the-badge&logo=databricks&logoColor=a78bfa)
-![Status](https://img.shields.io/badge/Status-Consolidado-052e16?style=for-the-badge&logo=checkmarx&logoColor=22c55e)
-![Fonte](https://img.shields.io/badge/Fonte-Mapeamento%20fornecido%20pelo%20usu%C3%A1rio-111827?style=for-the-badge&logo=files&logoColor=f59e0b)
+![Status](https://img.shields.io/badge/Status-Consolidado-052e16?style=for-the-badge&logo=checkmarx&logoColor=4ade80)
+![Fonte Base](https://img.shields.io/badge/Fonte%20Base-Legado%20Mapeado-1f2937?style=for-the-badge&logo=buffer&logoColor=fbbf24)
 
 </div>
 
