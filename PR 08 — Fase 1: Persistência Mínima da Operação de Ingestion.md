@@ -16,271 +16,153 @@
 ---
 
 > [!IMPORTANT]
-> Este PR implementa apenas o **próximo passo mínimo funcional** após a PR 07:
+> Esta PR é continuação direta da PR 07 e NÃO redefine arquitetura.
 >
-> - registrar de forma persistente a operação aberta de `ingestion`
-> - manter o vínculo com o ator autenticado via `initiatedByUserId`
-> - preservar um estado mínimo da operação
-> - continuar o fluxo sem inflar arquitetura ou antecipar pipeline futuro
+> Ela apenas introduz o próximo passo funcional mínimo:
 >
-> **Este PR não introduz fila, processamento assíncrono, BullMQ, repository pattern, ORM, ACL, pipeline multi-step ou abstrações de persistência prematuras.**
+> - persistir a operação de ingestion criada
+> - manter vínculo com o usuário autenticado (`initiatedByUserId`)
+> - preservar estado mínimo da operação
+>
+> Sem:
+> - ORM
+> - repository pattern
+> - fila
+> - pipeline
+> - abstração de storage
+> - expansão de auth
 
 ---
 
 ## 📚 Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)  
-2. [Objetivo do PR](#2-objetivo-do-pr)  
-3. [Decisão Arquitetural](#3-decisão-arquitetural)  
-4. [Escopo](#4-escopo)  
-5. [Fora de Escopo](#5-fora-de-escopo)  
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)  
-7. [Estrutura Proposta](#7-estrutura-proposta)  
-8. [Contratos Mínimos](#8-contratos-mínimos)  
-9. [Regras de Implementação](#9-regras-de-implementação)  
-10. [Critérios de Review](#10-critérios-de-review)  
-11. [Critérios de Aceite](#11-critérios-de-aceite)  
-12. [Conclusão](#12-conclusão)
+1. Síntese Executiva  
+2. Objetivo  
+3. Decisão Arquitetural  
+4. Escopo  
+5. Fora de Escopo  
+6. Fluxo  
+7. Contratos  
+8. Regras  
+9. Critérios de Review  
+10. Critérios de Aceite  
+11. Conclusão  
 
 ---
 
 ## 1. Síntese Executiva
 
-A **PR 06** estabeleceu a foundation do **auth delegado**.  
-A **PR 07** fez o primeiro uso funcional real de `request.user.id` no módulo de `ingestion`.
+- PR 06 → autenticação delegada  
+- PR 07 → propagação do usuário autenticado  
+- PR 08 → persistência mínima da operação  
 
-Esta **PR 08** continua esse fluxo com o **próximo passo mínimo e funcional**:
-
-- a operação de `ingestion` deixa de ser apenas um retorno em memória instantâneo;
-- passa a existir um **estado mínimo persistido** dentro do módulo;
-- esse estado continua vinculado ao usuário autenticado que iniciou a operação.
-
-O objetivo aqui não é “resolver ingestion”.
-
-O objetivo é validar o próximo degrau arquitetural com a **menor solução correta possível**.
+A arquitetura permanece a mesma definida na PR 07.
 
 ---
 
-## 2. Objetivo do PR
+## 2. Objetivo
 
-Este PR existe para:
+Adicionar persistência mínima da operação de ingestion:
 
-- registrar a operação criada de `ingestion`
-- preservar o `id` gerado da operação
+- manter `id`
 - manter `initiatedByUserId`
-- permitir que a abertura da operação tenha **estado mínimo persistido**
-- continuar a evolução do módulo sem expandir responsabilidade fora do recorte
+- permitir existência de estado mínimo
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão deste PR é deliberadamente simples:
+Mantém-se integralmente o desenho da PR 07:
 
-- o `AuthGuard` continua autenticando na borda HTTP
-- o controller continua apenas propagando `request.user.id`
-- o service continua recebendo `userId` explicitamente
-- a operação criada agora é **registrada em armazenamento mínimo local ao módulo**
+- controller fino
+- service simples
+- sem nova camada
+- sem infra adicional
 
-### Princípio central
-
-> Antes de sofisticar pipeline, persistência real, jobs ou processamento, a aplicação deve primeiro ser capaz de **abrir e manter o estado mínimo rastreável da operação**.
+A única mudança é registrar o estado da operação.
 
 ---
 
 ## 4. Escopo
 
-Este PR cobre apenas:
-
-- manter a criação do `ingestion`
-- registrar a operação criada em armazenamento mínimo
-- preservar `id` e `initiatedByUserId`
-- manter o controller fino
-- manter o service simples
-- manter o módulo enxuto e revisável
+- registrar ingestion em memória
+- manter contratos existentes
+- não alterar estrutura de módulos
 
 ---
 
 ## 5. Fora de Escopo
 
-Este PR **não cobre**:
-
-- persistência em PostgreSQL
-- repositories
-- ORM / Prisma / TypeORM
-- migrations
+- banco de dados
+- repository
+- ORM
 - fila / BullMQ
-- pipeline multi-step
-- processamento assíncrono
-- status avançado de execução
-- retries
-- observabilidade expandida
-- ACL de publicação
-- validação rica de payload
-- decorators adicionais
-- abstrações de storage
-
-> [!NOTE]
-> Este recorte valida apenas a existência do **estado mínimo da operação** antes de qualquer sofisticação posterior.
+- pipeline
+- validação avançada
+- abstração de storage
 
 ---
 
-## 6. Fluxo Arquitetural
+## 6. Fluxo
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "themeVariables": {
-    "background": "#0b1220",
-    "primaryColor": "#111827",
-    "primaryTextColor": "#e5f0ff",
-    "primaryBorderColor": "#22d3ee",
-    "lineColor": "#38bdf8",
-    "secondaryColor": "#0f172a",
-    "tertiaryColor": "#111827",
-    "fontFamily": "Inter, Segoe UI, Arial",
-    "clusterBkg": "#0f172a",
-    "clusterBorder": "#334155"
-  }
-}}%%
-
 flowchart LR
-    A[HTTP Request] --> B[AuthGuard]
-    B --> C[IngestionController]
-    C --> D[IngestionService]
-    D --> E[Create Ingestion Record]
-    E --> F[Persist Minimal State]
-    F --> G[Return Ingestion Record]
+    A[Request] --> B[AuthGuard]
+    B --> C[Controller]
+    C --> D[Service]
+    D --> E[Create Record]
+    E --> F[Store In Memory]
+    F --> G[Return]
 ```
-
-### Leitura do fluxo
-
-1. a requisição chega autenticada  
-2. o `AuthGuard` resolve o usuário  
-3. o controller extrai `request.user.id`  
-4. o service cria a operação  
-5. a operação passa a ser registrada em armazenamento mínimo  
-6. o estado inicial é retornado com rastreabilidade do ator
 
 ---
 
-## 7. Estrutura Proposta
-
-```text
-src/
-└── modules/
-    └── ingestion/
-        ├── infra/
-        │   ├── controllers/
-        │   │   └── ingestion.controller.ts
-        │   └── services/
-        │       └── ingestion.service.ts
-        ├── model/
-        │   └── v1/
-        │       └── ingestion.contracts.ts
-        └── ingestion.module.ts
-```
-
-### Observação
-
-A estrutura permanece propositalmente pequena.
-
-Não há criação de `repository`, `infra/database`, `entities`, `mappers`, `factories` ou camadas paralelas neste momento.
-
----
-
-## 8. Contratos Mínimos
-
-### Input
+## 7. Contratos
 
 ```ts
 export type CreateIngestionInput = {
   userId: number;
   payload: unknown;
 };
-```
 
-### Registro mínimo da operação
-
-```ts
 export type IngestionRecord = {
   id: string;
   initiatedByUserId: number;
 };
 ```
 
-### Intenção desses contratos
+---
 
-- `CreateIngestionInput` representa a entrada mínima do caso de uso
-- `IngestionRecord` representa o estado mínimo inicial da operação
+## 8. Regras
 
-Esses contratos permanecem intencionalmente pequenos para evitar antecipação indevida de pipeline futuro.
+- não criar abstração
+- não expandir arquitetura
+- manter simplicidade
+- não antecipar fases
 
 ---
 
-## 9. Regras de Implementação
+## 9. Critérios de Review
 
-A implementação deste PR deve seguir estas regras:
-
-- manter o controller fino
-- manter o service simples
-- não acoplar o service à camada HTTP
-- continuar propagando `userId` explicitamente
-- registrar a operação criada sem criar fundação paralela
-- não transformar persistência mínima em infraestrutura completa
-- não antecipar banco real, repository pattern ou abstrações de storage
-
-> [!TIP]
-> Se a solução parecer “arquitetural demais” para o que este PR entrega, ela provavelmente está errada para este recorte.
+- persistência mínima implementada
+- sem overengineering
+- aderente à PR 07
 
 ---
 
-## 10. Critérios de Review
+## 10. Critérios de Aceite
 
-O review deste PR deve validar se:
-
-- a persistência mínima da operação foi introduzida corretamente
-- `initiatedByUserId` continua sendo registrado
-- o service continua simples e coeso
-- não foi criada infraestrutura desnecessária
-- o recorte continua pequeno, funcional e revisável
-- o módulo não foi inflado com preparação futura
+- [ ] ingestion continua funcionando
+- [ ] estado mínimo persistido
+- [ ] initiatedByUserId preservado
+- [ ] sem abstração desnecessária
 
 ---
 
-## 11. Critérios de Aceite
+## 11. Conclusão
 
-- [ ] a criação da operação de `ingestion` continuar funcional
-- [ ] o `id` da operação continuar sendo gerado
-- [ ] `initiatedByUserId` continuar sendo registrado
-- [ ] a operação passar a existir em estado mínimo persistido
-- [ ] não houver abstração prematura
-- [ ] não houver expansão indevida do módulo
-- [ ] o recorte permanecer pequeno, funcional e revisável
+PR 08 apenas evolui o fluxo validado:
 
----
+auth → propagação → persistência mínima
 
-## 12. Conclusão
-
-A **PR 08** não tenta sofisticar o fluxo de `ingestion`.
-
-Ela apenas consolida o próximo passo lógico da **Fase 1**:
-
-- primeiro a identidade foi autenticada (**PR 06**)
-- depois foi propagada no fluxo (**PR 07**)
-- agora a operação aberta passa a ter **estado mínimo persistido** (**PR 08**)
-
-Essa progressão mantém o projeto:
-
-- simples
-- incremental
-- rastreável
-- revisável
-- aderente ao desenho arquitetural validado
-
----
-
-## Resultado esperado
-
-Ao final deste PR, o módulo de `ingestion` continuará pequeno, mas deixará de ser apenas um “retorno funcional de passagem” e passará a manter o **primeiro estado mínimo da operação** dentro do fluxo autenticado.
-
+Sem inflar arquitetura.
