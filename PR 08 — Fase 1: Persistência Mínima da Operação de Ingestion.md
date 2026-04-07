@@ -164,6 +164,3 @@ export type IngestionRecord = {
 PR 08 apenas evolui o fluxo validado:
 
 auth → propagação → persistência mínima
-
-Sem inflar arquitetura.
-](https://github.com/matheusdiamantino-betalent/Questions-IA/edit/main/PR%2008%20%E2%80%94%20Fase%201%3A%20Persist%C3%AAncia%20M%C3%ADnima%20da%20Opera%C3%A7%C3%A3o%20de%20Ingestion.md)
