@@ -1,12 +1,12 @@
-# 🔄 PR 08 — Fase 1: Persistência Mínima da Operação de Ingestion
-## Primeiro estado persistido da operação iniciada por usuário autenticado
+# 🔄 PR 08 — Fase 1: Estado Inicial Mínimo da Operação de Ingestion
+## Primeiro registro estruturado da operação iniciada por usuário autenticado
 
 ---
 
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-08-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-persist%C3%AAncia%20m%C3%ADnima-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Tipo](https://img.shields.io/badge/tipo-estado%20inicial%20m%C3%ADnimo-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
 ![Escopo](https://img.shields.io/badge/escopo-ingestion%20state-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
@@ -20,12 +20,14 @@
 >
 > Ela introduz apenas o próximo passo funcional mínimo do fluxo:
 >
-> - persistir a operação de ingestion criada
+> - materializar o estado inicial da operação de ingestion
 > - manter vínculo com o usuário autenticado (`initiatedByUserId`)
-> - registrar o primeiro estado mínimo da operação
+> - explicitar o primeiro registro estruturado da operação no domínio
 >
 > Sem:
 >
+> - banco de dados
+> - persistência física
 > - repository pattern
 > - nova camada arquitetural
 > - fila
@@ -46,7 +48,7 @@
 - [7. Fora de Escopo](#7-fora-de-escopo)
 - [8. Fluxo Arquitetural](#8-fluxo-arquitetural)
 - [9. Contratos](#9-contratos)
-- [10. Persistência Mínima Esperada](#10-persistência-mínima-esperada)
+- [10. Estado Inicial Esperado](#10-estado-inicial-esperado)
 - [11. Regras de Implementação](#11-regras-de-implementação)
 - [12. Critérios de Review](#12-critérios-de-review)
 - [13. Critérios de Aceite](#13-critérios-de-aceite)
@@ -60,7 +62,7 @@ A evolução arquitetural da foundation até aqui é:
 
 - **PR 06** → autenticação delegada mínima
 - **PR 07** → propagação do usuário autenticado até o domínio de `ingestion`
-- **PR 08** → persistência mínima da operação aberta por esse usuário
+- **PR 08** → materialização do estado inicial mínimo da operação
 
 A **PR 07** validou que a identidade autenticada já atravessa corretamente a borda HTTP e entra no caso de uso via:
 
@@ -70,13 +72,13 @@ request.user.id
 
 A **PR 08** dá o próximo passo natural:
 
-> **a operação de ingestion deixa de existir apenas como retorno conceitual em memória e passa a nascer com estado mínimo persistido.**
+> **a operação de ingestion deixa de existir apenas como retorno parcial e passa a nascer com estado inicial mínimo explícito e consistente no domínio.**
 
 O foco desta PR **não é sofisticar o domínio**.
 
 O foco é apenas garantir que a abertura da operação:
 
-- exista como registro persistido
+- exista como registro estruturado mínimo
 - tenha autoria mínima registrada
 - tenha estado inicial explícito
 - continue pequena, simples e revisável
@@ -85,14 +87,14 @@ O foco é apenas garantir que a abertura da operação:
 
 ## 3. Objetivo
 
-Introduzir a **persistência mínima real** da operação de `ingestion`, preservando a simplicidade validada na PR 07.
+Introduzir a **materialização mínima do estado inicial** da operação de `ingestion`, preservando a simplicidade validada na PR 07.
 
 ### O que esta PR precisa garantir
 
 - a operação nasce com identificador
 - a operação nasce vinculada ao usuário autenticado que a iniciou
-- a operação possui estado inicial mínimo
-- a operação pode ser rastreada desde a abertura
+- a operação possui estado inicial mínimo explícito
+- a operação pode ser rastreada desde a abertura no domínio
 
 ### Em termos práticos
 
@@ -111,7 +113,7 @@ A operação criada deve preservar minimamente:
 
 A decisão desta PR é propositalmente conservadora:
 
-> **Persistir antes de sofisticar.**
+> **Materializar antes de sofisticar.**
 
 ### Isso significa:
 
@@ -125,7 +127,7 @@ A decisão desta PR é propositalmente conservadora:
 ### Princípio aplicado
 
 - **usar antes de abstrair**
-- **persistir antes de orquestrar**
+- **explicitar antes de persistir**
 - **validar antes de generalizar**
 - **não criar fundação paralela**
 
@@ -144,9 +146,9 @@ Esse passo foi importante porque validou que:
 
 Mas isso ainda deixava uma lacuna:
 
-> a operação ainda não nascia como **estado persistido real**.
+> a operação ainda não nascia com um **estado mínimo explícito e completo**.
 
-Ou seja, o sistema já sabia **quem iniciou**, mas ainda não materializava corretamente **a existência da operação**.
+Ou seja, o sistema já sabia **quem iniciou**, mas ainda não materializava corretamente **a forma mínima da operação**.
 
 A PR 08 existe para fechar exatamente esse gap, sem inflar o domínio antes da hora.
 
@@ -156,7 +158,7 @@ A PR 08 existe para fechar exatamente esse gap, sem inflar o domínio antes da h
 
 Esta PR inclui:
 
-- persistência mínima da operação de `ingestion`
+- materialização mínima da operação de `ingestion`
 - manutenção explícita de `initiatedByUserId`
 - manutenção do `payload` recebido na abertura
 - definição do estado inicial mínimo da operação
@@ -169,7 +171,7 @@ Espera-se que esta PR preserve:
 - `AuthGuard` na borda
 - leitura de `request.user.id` no controller
 - propagação explícita de `userId` ao service
-- persistência mínima do registro da operação
+- criação do estado inicial mínimo da operação
 - retorno do registro criado
 
 ---
@@ -178,6 +180,10 @@ Espera-se que esta PR preserve:
 
 Esta PR **não** inclui:
 
+- banco de dados
+- persistência física
+- schema de tabela
+- migration
 - expansão do módulo `auth`
 - `CurrentUser` decorator
 - request context global
@@ -227,15 +233,13 @@ flowchart LR
     C --> D[IngestionController]:::controller
     D --> E[IngestionService]:::service
     E --> F[Create Initial Ingestion State]:::domain
-    F --> G[Persist Minimal Operation State]:::storage
-    G --> H[Return Ingestion Record]:::result
+    F --> G[Return Initial Ingestion Record]:::result
 
     classDef node fill:#0f172a,stroke:#22d3ee,color:#e5f0ff,stroke-width:2px;
     classDef auth fill:#111827,stroke:#a78bfa,color:#f5f3ff,stroke-width:2px;
     classDef controller fill:#0b1220,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
     classDef service fill:#111827,stroke:#22c55e,color:#ecfdf5,stroke-width:2px;
     classDef domain fill:#1e1b4b,stroke:#8b5cf6,color:#ede9fe,stroke-width:2px;
-    classDef storage fill:#082f49,stroke:#06b6d4,color:#ecfeff,stroke-width:2px;
     classDef result fill:#052e16,stroke:#22c55e,color:#f0fdf4,stroke-width:2px;
 ```
 
@@ -252,7 +256,7 @@ export type CreateIngestionInput = {
 };
 ```
 
-### Estado mínimo persistido da operação
+### Estado inicial mínimo da operação
 
 ```ts
 export type IngestionRecord = {
@@ -269,13 +273,13 @@ export type IngestionRecord = {
 
 Este contrato não tenta modelar o pipeline completo.
 
-Ele modela apenas o **primeiro estado persistido da operação**.
+Ele modela apenas o **primeiro estado mínimo explícito da operação**.
 
 ---
 
-## 10. Persistência Mínima Esperada
+## 10. Estado Inicial Esperado
 
-A persistência esperada nesta PR deve ser pequena, explícita e suficiente para o recorte atual.
+O estado esperado nesta PR deve ser pequeno, explícito e suficiente para o recorte atual.
 
 ### Estado inicial esperado
 
@@ -292,13 +296,14 @@ A persistência esperada nesta PR deve ser pequena, explícita e suficiente para
 
 ### O que isso valida
 
-- a operação realmente nasceu
+- a operação realmente nasceu no domínio
 - a operação tem autoria mínima
 - a operação tem rastreabilidade inicial
-- o sistema já consegue evoluir o fluxo a partir de um estado persistido
+- o sistema já possui um shape mínimo consistente para evolução futura
 
 ### O que isso ainda não tenta resolver
 
+- persistência física
 - lifecycle completo
 - transições de estado avançadas
 - execução assíncrona
@@ -321,15 +326,9 @@ A persistência esperada nesta PR deve ser pequena, explícita e suficiente para
 
 - recebe `userId` explicitamente
 - recebe `payload`
-- cria o estado inicial da operação
-- persiste o estado mínimo
+- cria o estado inicial mínimo da operação
 - retorna o registro criado
-
-### Persistência
-
-- deve seguir o mecanismo já existente no projeto
-- não deve introduzir arquitetura paralela
-- não deve criar abstração nova sem necessidade real
+- não deve assumir infraestrutura ainda não definida no projeto
 
 ### Regras gerais
 
@@ -346,14 +345,13 @@ A persistência esperada nesta PR deve ser pequena, explícita e suficiente para
 O review desta PR deve validar se:
 
 - a PR 08 é continuação clara da PR 07
-- o salto entre “propagação” e “persistência mínima” está correto
+- o salto entre “propagação” e “estado inicial mínimo” está correto
 - `initiatedByUserId` continua sendo preservado corretamente
-- o estado inicial persistido está adequado ao recorte
+- o estado inicial da operação está adequado ao recorte
 - o controller continua fino
 - o service continua simples
 - não houve expansão indevida de escopo
 - não surgiram abstrações sem segundo caso real
-- a persistência foi feita respeitando o padrão já existente do projeto
 
 ---
 
@@ -364,9 +362,9 @@ Esta PR pode ser considerada aceita se:
 - [ ] o endpoint de `ingestion` continuar protegido por `AuthGuard`
 - [ ] `request.user.id` continuar acessível no controller
 - [ ] `userId` continuar sendo propagado explicitamente ao service
-- [ ] a operação criada passar a nascer persistida
-- [ ] `initiatedByUserId` for salvo corretamente
-- [ ] o estado inicial mínimo for preservado
+- [ ] a operação criada passar a nascer com estado inicial mínimo explícito
+- [ ] `initiatedByUserId` for preservado corretamente
+- [ ] `status`, `payload`, `createdAt` e `updatedAt` forem materializados corretamente
 - [ ] não houver abstração prematura
 - [ ] não houver expansão indevida do auth
 - [ ] o recorte permanecer pequeno, funcional e revisável
@@ -379,12 +377,12 @@ A PR 08 não tenta sofisticar o domínio de `ingestion`.
 
 Ela apenas introduz o próximo passo correto depois da PR 07:
 
-> **se a identidade autenticada já entra corretamente no domínio, a operação iniciada por essa identidade deve passar a existir como estado persistido mínimo.**
+> **se a identidade autenticada já entra corretamente no domínio, a operação iniciada por essa identidade deve passar a nascer com estado inicial mínimo explícito e consistente.**
 
 Em resumo:
 
 - **PR 06** autenticou a borda
 - **PR 07** propagou a identidade ao domínio
-- **PR 08** faz a operação nascer persistida
+- **PR 08** materializa o estado inicial mínimo da operação
 
-Essa PR, portanto, valida o primeiro estado real da operação de entrada do pipeline — ainda pequeno, simples e fiel ao recorte da Fase 1.
+Essa PR, portanto, valida o primeiro registro estruturado da operação de entrada do pipeline — ainda pequeno, simples e fiel ao recorte da Fase 1.
