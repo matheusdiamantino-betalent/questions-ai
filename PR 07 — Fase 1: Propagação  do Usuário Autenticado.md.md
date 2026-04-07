@@ -38,7 +38,7 @@
 - [5. Escopo](#5-escopo)
 - [6. Fora de Escopo](#6-fora-de-escopo)
 - [7. Fluxo Arquitetural](#7-fluxo-arquitetural)
-- [8. Estrutura Proposta](#8-estrutura-proposta)
+- [8. Estrutura Proposta do PR](#8-estrutura-proposta-do-pr)
 - [9. Boundary e Propagação](#9-boundary-e-propagação)
 - [10. Regras de Implementação](#10-regras-de-implementação)
 - [11. Critérios de Review](#11-critérios-de-review)
@@ -138,6 +138,7 @@ Este PR inclui:
 
 Este PR **não** inclui:
 
+- mudanças estruturais no módulo `auth`
 - `CurrentUser` decorator
 - request context global
 - abstração genérica de propagation de identidade
@@ -201,24 +202,16 @@ flowchart LR
 
 ---
 
-## 8. Estrutura Proposta
+## 8. Estrutura Proposta do PR
+
+> [!IMPORTANT]
+> A árvore abaixo mostra **apenas o recorte novo da PR 07**.
+>
+> O módulo `auth` já foi descrito e consolidado na **PR 06**, então não é repetido aqui.
 
 ```text
 src/
 └── modules/
-    ├── auth/
-    │   ├── auth.module.ts
-    │   ├── infra/
-    │   │   ├── clients/
-    │   │   │   └── auth-api.client.ts
-    │   │   ├── guards/
-    │   │   │   └── auth.guard.ts
-    │   │   └── services/
-    │   │       └── auth.service.ts
-    │   └── model/
-    │       └── v1/
-    │           └── auth.contracts.ts
-    │
     └── ingestion/
         ├── ingestion.module.ts
         ├── infra/
