@@ -4,9 +4,9 @@
 
 ![Banco](https://img.shields.io/badge/Banco-MySQL%20%2F%20Adonis-111827?style=for-the-badge&logo=mysql&logoColor=00e5ff)
 ![Documento](https://img.shields.io/badge/Documento-Dicion%C3%A1rio%20de%20Dados-0f172a?style=for-the-badge&logo=readme&logoColor=22d3ee)
-![Escopo](https://img.shields.io/badge/Escopo-Modelo%20L%C3%B3gico%20e%20Funcional-111827?style=for-the-badge&logo=databricks&logoColor=a78bfa)
+![Escopo](https://img.shields.io/badge/Escopo-Modelo%20%20L%C3%B3gico%20e%20Funcional-111827?style=for-the-badge&logo=databricks&logoColor=a78bfa)
 ![Status](https://img.shields.io/badge/Status-Consolidado-052e16?style=for-the-badge&logo=checkmarx&logoColor=22c55e)
-![Foco](https://img.shields.io/badge/Foco-Questions%20%26%20Identity-111827?style=for-the-badge&logo=target&logoColor=f59e0b)
+![Foco](https://img.shields.io/badge/Foco-Questions%20em%20Destaque-111827?style=for-the-badge&logo=target&logoColor=f59e0b)
 
 </div>
 
@@ -16,13 +16,12 @@
 
 1. [Visão Geral](#1-visão-geral)
 2. [Mapa de Domínios](#2-mapa-de-domínios)
-3. [Diagrama ER — Foco em Identity e Questions](#3-diagrama-er--foco-em-identity-e-questions)
+3. [Diagrama ER — Visão Geral com Ênfase em Questions](#3-diagrama-er--visão-geral-com-ênfase-em-questions)
 4. [Matriz de Relacionamentos](#4-matriz-de-relacionamentos)
-5. [Dicionário de Dados — Identity](#5-dicionário-de-dados--identity)
-6. [Dicionário de Dados — Questions](#6-dicionário-de-dados--questions)
-7. [Tabelas de Apoio Relacionadas](#7-tabelas-de-apoio-relacionadas)
-8. [Catálogo Consolidado](#8-catálogo-consolidado)
-9. [Resumo Executivo](#9-resumo-executivo)
+5. [Domínio Prioritário — Questions](#5-domínio-prioritário--questions)
+6. [Dicionário por Domínio](#6-dicionário-por-domínio)
+7. [Catálogo Consolidado de Tabelas](#7-catálogo-consolidado-de-tabelas)
+8. [Resumo Executivo](#8-resumo-executivo)
 
 ---
 
@@ -30,40 +29,42 @@
 
 ## 1.1 Objetivo
 
-Este documento registra o modelo de dados de uma plataforma educacional com ênfase nos domínios de:
+Este documento registra a estrutura de dados de uma plataforma educacional voltada a concursos, cobrindo todas as tabelas fornecidas, com maior ênfase no domínio de **questions**.
 
-- **identidade**
-- **acesso**
-- **questões**
-- **classificação de questões**
-- **interação do aluno com questões**
+## 1.2 Eixos do modelo
 
-## 1.2 Leitura do modelo
+O banco se organiza em torno de blocos funcionais de:
 
-O recorte documentado concentra os blocos mais centrais para operação funcional de:
-
-- usuários
-- administradores
+- identidade e acesso
+- catálogo educacional
 - banco de questões
-- filtros
-- classificação jurídica
-- resposta e acompanhamento de questões
+- simulados
+- biblioteca e materiais
+- organização pessoal
+- comunicação e marketing
+- tracking e ranking
+- integrações e operação
 
 ---
 
 # 2. Mapa de Domínios
 
-| Domínio | Papel no modelo |
+| Domínio | Escopo |
 |---|---|
-| 👤 Identity | cadastro, autenticação, administração e trilhas de acesso |
-| ❓ Questions | cadastro, classificação, resposta, comentário e estatística |
-| 🧠 Classificação Jurídica | disciplina, matéria e submatéria aplicadas às questões |
-| 📝 Simulados | reaproveitamento de questões em simulados |
-| 🎓 Educacional | vínculo entre aluno, curso e contexto de acesso |
+| 👤 Identidade & Acesso | clientes, admins, roles, logins, logs e permissões |
+| 🎓 Catálogo Educacional | classes, categories, modules, contents e vínculos de acesso |
+| ❓ Questions | questões, filtros, respostas, estatísticas, comentários, erros e lembretes |
+| 🧠 Classificação Jurídica | disciplines, matters, sub_matters e classificação temática |
+| 📝 Simulados | mock_exams, mock_questions, resoluções e respostas |
+| 📚 Biblioteca & Materiais | libraries, files e status de consumo |
+| 📒 Organização Pessoal | notebooks, folders e questões salvas |
+| 📣 Comunicação & Marketing | anúncios, notificações, popups e landing pages |
+| 🏆 Engajamento & Tracking | rankings, trackings e métricas de uso |
+| 🔌 Integrações & Operação | webhooks, WhatsApp, migração e controle de schema |
 
 ---
 
-# 3. Diagrama ER — Foco em Identity e Questions
+# 3. Diagrama ER — Visão Geral com Ênfase em Questions
 
 ```mermaid
 %%{init: {
@@ -87,45 +88,72 @@ erDiagram
     CLIENTS ||--o{ ADDRESSES : has
     CLIENTS ||--o{ CLIENT_LOGINS : logs
     CLIENTS ||--o{ CLIENT_LOGS : records
+    CLIENTS ||--o{ CLASS_CLIENTS : enrolls
+    CLIENTS ||--o{ QUESTION_RESPONSES : answers
+    CLIENTS ||--o{ QUESTION_COMMENTS : writes
+    CLIENTS ||--o{ QUESTION_ERRORS : reports
+    CLIENTS ||--o{ QUESTION_REMINDERS : creates
+    CLIENTS ||--o{ CLIENT_FILTERS : saves
+    CLIENTS ||--o{ CLIENT_FILTER_FOLDERS : organizes
+    CLIENTS ||--o{ NOTEBOOKS : owns
+    CLIENTS ||--o{ MOCK_RESOLUTIONS : resolves
+    CLIENTS ||--o{ FILE_CLIENT_STATUSES : accesses
+    CLIENTS ||--o{ GENERAL_RANKINGS : ranks
+    CLIENTS ||--o{ RANKING_TRACKINGS : tracked
+    CLIENTS ||--o{ TRACKINGS : performs
 
     ADMINS ||--o{ ADMIN_ROLES : owns
     ROLES ||--o{ ADMIN_ROLES : grants
-
     ADMINS ||--o{ QUESTIONS : creates
 
+    CATEGORIES ||--o{ MODULES : groups
+    MODULES ||--o{ CONTENTS : contains
+    CLASSES ||--o{ CLASS_MODULES : links
+    MODULES ||--o{ CLASS_MODULES : linked
+    CONTENTS ||--o{ MODULE_CLIENT_STATUSES : tracked
+    CONTENTS ||--o{ CONTENT_FILES : receives
+
     QUESTIONS ||--o{ QUESTION_RESPONSES : receives
-    CLIENTS ||--o{ QUESTION_RESPONSES : answers
-
     QUESTIONS ||--o{ QUESTION_STATISTICS : aggregates
+    QUESTIONS ||--o{ QUESTION_FILTERS : classified
+    QUESTIONS ||--o{ QUESTION_SUB_MATTERS : categorized
+    QUESTIONS ||--o{ QUESTION_COMMENTS : commented
+    QUESTIONS ||--o{ QUESTION_ERRORS : flagged
+    QUESTIONS ||--o{ QUESTION_REMINDERS : reminded
+    QUESTIONS ||--o{ NOTEBOOK_QUESTIONS : saved
+    QUESTIONS ||--o{ MOCK_QUESTIONS : reused
 
-    FILTER_TYPES ||--o{ FILTERS : classifies
-    QUESTIONS ||--o{ QUESTION_FILTERS : maps
-    FILTERS ||--o{ QUESTION_FILTERS : applied_to
-
-    CLIENTS ||--o{ CLIENT_FILTERS : saves
-    CLIENTS ||--o{ CLIENT_FILTER_FOLDERS : organizes
+    FILTER_TYPES ||--o{ FILTERS : types
+    FILTERS ||--o{ QUESTION_FILTERS : applied
 
     DISCIPLINES ||--o{ MATTERS : contains
     MATTERS ||--o{ SUB_MATTERS : contains
-    QUESTIONS ||--o{ QUESTION_SUB_MATTERS : classified_in
-    SUB_MATTERS ||--o{ QUESTION_SUB_MATTERS : categorizes
+    SUB_MATTERS ||--o{ QUESTION_SUB_MATTERS : classifies
 
-    QUESTIONS ||--o{ QUESTION_COMMENTS : receives
-    QUESTIONS ||--o{ QUESTION_ERRORS : receives
-    QUESTIONS ||--o{ QUESTION_REMINDERS : receives
+    MOCK_CATEGORIES ||--o{ MOCK_EXAMS : groups
+    MOCK_EXAMS ||--o{ MOCK_QUESTIONS : contains
+    MOCK_EXAMS ||--o{ MOCK_RESOLUTIONS : resolved
+    MOCK_RESOLUTIONS ||--o{ MOCK_RESPONSES : stores
 
-    CLIENTS ||--o{ QUESTION_COMMENTS : writes
-    CLIENTS ||--o{ QUESTION_ERRORS : reports
-    CLIENTS ||--o{ QUESTION_REMINDERS : writes
+    LIBRARIES ||--o{ LIBRARY_FILES : contains
+    LIBRARY_FILES ||--o{ CONTENT_FILES : linked
+    LIBRARY_FILES ||--o{ FILE_CLIENT_STATUSES : tracked
 
-    QUESTIONS ||--o{ MOCK_QUESTIONS : reused_in
+    NOTEBOOK_FOLDERS ||--o{ NOTEBOOKS : organizes
+    NOTEBOOKS ||--o{ NOTEBOOK_QUESTIONS : stores
+
+    ANNOUNCEMENTS ||--o{ NOTIFICATIONS : originates
+    NOTIFICATIONS ||--o{ CLIENT_READED_NOTIFICATIONS : read_by
+
+    POPUPS ||--o{ POPUPS_TRACKINGS : tracked
+    PROMOTIONAL_LANDING_PAGES ||--o{ PROMOTIONAL_LANDING_PAGE_LEADS : captures
 ```
 
 ---
 
 # 4. Matriz de Relacionamentos
 
-## 4.1 Identity
+## 4.1 Identity & Acesso
 
 | Origem | Campo | Destino | Cardinalidade |
 |---|---|---|---|
@@ -135,7 +163,30 @@ erDiagram
 | `admin_roles` | `admin_id` | `admins.id` | N:1 |
 | `admin_roles` | `role_id` | `roles.id` | N:1 |
 
-## 4.2 Questions
+## 4.2 Educacional
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `class_clients` | `client_id` | `clients.id` | N:1 |
+| `class_clients` | `class_id` | `classes.id` | N:1 |
+| `class_clients` | `code_id` | `class_codes.id` | N:1 |
+| `class_codes` | `class_id` | `classes.id` | N:1 |
+| `modules` | `category_id` | `categories.id` | N:1 |
+| `class_modules` | `module_id` | `modules.id` | N:1 |
+| `class_modules` | `class_id` | `classes.id` | N:1 |
+| `contents` | `module_id` | `modules.id` | N:1 |
+| `module_client_statuses` | `client_id` | `clients.id` | N:1 |
+| `module_client_statuses` | `content_id` | `contents.id` | N:1 |
+| `client_favorite_modules` | `client_id` | `clients.id` | N:1 |
+| `client_favorite_modules` | `module_id` | `modules.id` | N:1 |
+| `client_last_access_modules` | `client_id` | `clients.id` | N:1 |
+| `client_last_access_modules` | `module_id` | `modules.id` | N:1 |
+| `module_comments` | `content_id` | `contents.id` | N:1 |
+| `module_comments` | `client_id` | `clients.id` | N:1 |
+| `module_errors` | `content_id` | `contents.id` | N:1 |
+| `module_errors` | `client_id` | `clients.id` | N:1 |
+
+## 4.3 Questions
 
 | Origem | Campo | Destino | Cardinalidade |
 |---|---|---|---|
@@ -154,106 +205,263 @@ erDiagram
 | `question_errors` | `client_id` | `clients.id` | N:1 |
 | `question_reminders` | `question_id` | `questions.id` | N:1 |
 | `question_reminders` | `client_id` | `clients.id` | N:1 |
-| `matters` | `discipline_id` | `disciplines.id` | N:1 |
-| `sub_matters` | `matter_id` | `matters.id` | N:1 |
 | `question_sub_matters` | `question_id` | `questions.id` | N:1 |
 | `question_sub_matters` | `sub_matter_id` | `sub_matters.id` | N:1 |
+
+## 4.4 Classificação Jurídica
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `matters` | `discipline_id` | `disciplines.id` | N:1 |
+| `sub_matters` | `matter_id` | `matters.id` | N:1 |
+
+## 4.5 Simulados
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `mock_exams` | `category_id` | `mock_categories.id` | N:1 |
 | `mock_questions` | `question_id` | `questions.id` | N:1 |
+| `mock_questions` | `mock_id` | `mock_exams.id` | N:1 |
+| `mock_resolutions` | `mock_id` | `mock_exams.id` | N:1 |
+| `mock_resolutions` | `client_id` | `clients.id` | N:1 |
+| `mock_responses` | `question_id` | `questions.id` | N:1 |
+| `mock_responses` | `resolution_id` | `mock_resolutions.id` | N:1 |
+| `class_mocks` | `mock_id` | `mock_exams.id` | N:1 |
+| `class_mocks` | `class_id` | `classes.id` | N:1 |
+| `mock_category_client_ratings` | `category_id` | `mock_categories.id` | N:1 |
+| `mock_category_client_ratings` | `client_id` | `clients.id` | N:1 |
+
+## 4.6 Biblioteca & Materiais
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `library_files` | `library_id` | `libraries.id` | N:1 |
+| `content_files` | `file_id` | `library_files.id` | N:1 |
+| `content_files` | `content_id` | `contents.id` | N:1 |
+| `file_client_statuses` | `file_id` | `library_files.id` | N:1 |
+| `file_client_statuses` | `client_id` | `clients.id` | N:1 |
+
+## 4.7 Organização Pessoal
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `notebooks` | `client_id` | `clients.id` | N:1 |
+| `notebooks` | `notebook_folder_id` | `notebook_folders.id` | N:1 |
+| `notebook_folders` | `client_id` | `clients.id` | N:1 |
+| `notebook_questions` | `question_id` | `questions.id` | N:1 |
+| `notebook_questions` | `notebook_id` | `notebooks.id` | N:1 |
+
+## 4.8 Comunicação, Marketing e Engajamento
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `announcements` | `class_id` | `classes.id` | N:1 |
+| `notifications` | `announcement_id` | `announcements.id` | N:1 |
+| `notifications` | `class_id` | `classes.id` | N:1 |
+| `client_readed_notifications` | `client_id` | `clients.id` | N:1 |
+| `client_readed_notifications` | `notification_id` | `notifications.id` | N:1 |
+| `popups` | `class_id` | `classes.id` | N:1 |
+| `popups_trackings` | `popup_id` | `popups.id` | N:1 |
+| `popups_trackings` | `client_id` | `clients.id` | N:1 |
+| `promotional_landing_pages` | `class_id` | `classes.id` | N:1 |
+| `promotional_landing_page_leads` | `client_id` | `clients.id` | N:1 |
+| `promotional_landing_page_leads` | `class_id` | `classes.id` | N:1 |
+| `promotional_landing_page_leads` | `promo_lp_id` | `promotional_landing_pages.id` | N:1 |
+| `general_rankings` | `client_id` | `clients.id` | N:1 |
+| `ranking_trackings` | `client_id` | `clients.id` | N:1 |
+| `trackings` | `client_id` | `clients.id` | N:1 |
+
+## 4.9 Integrações e Operação
+
+| Origem | Campo | Destino | Cardinalidade |
+|---|---|---|---|
+| `status_migrations` | `client_id` | `clients.id` | N:1 |
 
 ---
 
-# 5. Dicionário de Dados — Identity
+# 5. Domínio Prioritário — Questions
 
-## 5.1 `clients`
+## 5.1 Núcleo funcional
 
-**Descrição:** entidade principal de usuário da plataforma.
+O domínio de **questions** é o bloco mais rico do modelo. Ele se organiza em torno da entidade central `questions` e de quatro grupos auxiliares:
+
+- **resolução**: `question_responses`, `question_statistics`
+- **classificação**: `filter_types`, `filters`, `question_filters`, `question_sub_matters`
+- **interação do aluno**: `question_comments`, `question_errors`, `question_reminders`
+- **reuso funcional**: `mock_questions`, `notebook_questions`
+
+## 5.2 Backbone reduzido
+
+```text
+admins
+└── questions
+    ├── question_responses
+    │   └── clients
+    ├── question_statistics
+    ├── question_filters
+    │   └── filters
+    │       └── filter_types
+    ├── question_sub_matters
+    │   └── sub_matters
+    │       └── matters
+    │           └── disciplines
+    ├── question_comments
+    ├── question_errors
+    ├── question_reminders
+    ├── notebook_questions
+    └── mock_questions
+```
+
+## 5.3 Tabelas centrais do domínio
+
+### `questions`
+
+Tabela principal do banco de questões.
 
 | Campo | Descrição |
 |---|---|
-| `id` | identificador do cliente |
-| `name` | nome do cliente |
-| `email` | e-mail de acesso |
-| `password` | senha |
-| `cpf_cnpj` | documento |
-| `phone` | telefone |
-| `whatsapp` | contato WhatsApp |
-| `image_url` | imagem de perfil |
-| `birthdate` | data de nascimento |
-| `code` | código associado |
-| `token_migration` | token de migração |
-| `app_free_access` | controle de acesso gratuito |
-| `interest` | interesse informado |
-| `migrated` | indicador de migração |
-| `created_at` | criação do registro |
-| `updated_at` | atualização do registro |
+| `id` | identificador da questão |
+| `user_id` | administrador criador |
+| `title` | enunciado |
+| `description` | detalhamento |
+| `explanation` | explicação da resposta |
+| `is_true` | resposta correta em modelo V/F |
+| `is_accepted` | status de aceite |
+| `reason_refused` | motivo de recusa |
+| `is_from_client` | origem em cliente |
+| `ia_generated` | origem por IA |
+| `created_at` | criação |
+| `updated_at` | atualização |
 
-**Relações diretas:**
-- `addresses.client_id`
-- `client_logins.client_id`
-- `client_logs.client_id`
-- `question_responses.client_id`
-- `client_filters.client_id`
-- `client_filter_folders.client_id`
-- `question_comments.client_id`
-- `question_errors.client_id`
-- `question_reminders.client_id`
+### `question_responses`
 
----
-
-## 5.2 `addresses`
-
-**Descrição:** endereços vinculados ao cliente.
+Respostas dos clientes às questões.
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
-| `client_id` | cliente relacionado |
-| `street` | rua |
-| `number` | número |
-| `district` | bairro |
-| `cep` | CEP |
-| `city` | cidade |
-| `uf` | UF |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `client_response` | resposta enviada |
+| `is_correct` | acerto/erro |
+| `is_current` | tentativa atual |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_statistics`
+
+Agregados de desempenho por questão.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `total_correct` | total de acertos |
+| `total_incorrect` | total de erros |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_filters`
+
+Associação entre questões e filtros.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `filter_id` | filtro |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_sub_matters`
+
+Associação entre questões e submatérias.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `sub_matter_id` | submatéria |
+| `position` | ordem/relevância |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_comments`
+
+Comentários do cliente sobre questões.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_errors`
+
+Registros de erro vinculados às questões.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_reminders`
+
+Lembretes associados às questões.
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
 ---
 
-## 5.3 `client_logins`
+# 6. Dicionário por Domínio
 
-**Descrição:** histórico de login do cliente.
+## 6.1 👤 Identidade & Acesso
+
+### `clients`
 
 | Campo | Descrição |
 |---|---|
-| `id` | identificador |
-| `client_id` | cliente relacionado |
-| `platform` | plataforma utilizada |
-| `os_version` | versão do sistema |
-| `created_at` | data/hora do login |
+| `id` | identificador do cliente |
+| `name` | nome |
+| `email` | e-mail |
+| `password` | senha |
+| `cpf_cnpj` | documento |
+| `phone` | telefone |
+| `whatsapp` | WhatsApp |
+| `image_url` | imagem de perfil |
+| `birthdate` | data de nascimento |
+| `code` | código associado |
+| `token_migration` | token de migração |
+| `app_free_access` | acesso gratuito ao app |
+| `interest` | interesse |
+| `created_at` | criação |
 | `updated_at` | atualização |
+| `migrated` | indicador de migração |
 
----
-
-## 5.4 `client_logs`
-
-**Descrição:** trilha de ações registradas para o cliente.
-
-| Campo | Descrição |
-|---|---|
-| `id` | identificador |
-| `client_id` | cliente relacionado |
-| `action` | ação registrada |
-| `color` | cor associada |
-| `icon` | ícone associado |
-| `description` | descrição textual |
-| `client_side_show` | indicador de exibição |
-| `created_at` | data do evento |
-
----
-
-## 5.5 `admins`
-
-**Descrição:** usuários administrativos da plataforma.
+### `admins`
 
 | Campo | Descrição |
 |---|---|
@@ -265,24 +473,16 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 5.6 `roles`
-
-**Descrição:** catálogo de papéis administrativos.
+### `roles`
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
-| `name` | nome do papel |
+| `name` | nome da função |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 5.7 `admin_roles`
-
-**Descrição:** associação entre administradores e papéis.
+### `admin_roles`
 
 | Campo | Descrição |
 |---|---|
@@ -292,66 +492,249 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-# 6. Dicionário de Dados — Questions
-
-## 6.1 `questions`
-
-**Descrição:** tabela central do banco de questões.
+### `addresses`
 
 | Campo | Descrição |
 |---|---|
-| `id` | identificador da questão |
-| `user_id` | administrador relacionado |
-| `title` | título ou enunciado |
-| `description` | descrição complementar |
+| `id` | identificador |
+| `client_id` | cliente |
+| `street` | rua |
+| `number` | número |
+| `district` | bairro |
+| `cep` | CEP |
+| `city` | cidade |
+| `uf` | UF |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `client_logins`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `platform` | plataforma |
+| `os_version` | versão do sistema |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `client_logs`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `action` | ação |
+| `color` | cor |
+| `icon` | ícone |
+| `description` | descrição |
+| `client_side_show` | exibição para o cliente |
+| `created_at` | criação |
+
+---
+
+## 6.2 🎓 Catálogo Educacional
+
+### `classes`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador do curso |
+| `name` | nome |
+| `period` | período |
+| `pdf` | flag de PDF |
+| `question` | flag de questões |
+| `general` | flag geral |
+| `collaborative` | flag colaborativa |
+| `is_paid` | curso pago/gratuito |
+| `show_expiration` | exibição de expiração |
+| `expiration_message` | mensagem de expiração |
+| `description` | descrição |
+| `image_url` | imagem |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `class_clients`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador da matrícula |
+| `client_id` | cliente |
+| `class_id` | curso |
+| `code_id` | código de acesso |
+| `is_canceled` | cancelamento |
+| `cancellation_reason` | motivo |
+| `is_refunded` | reembolso |
+| `is_lifetime` | acesso vitalício |
+| `expiration_date` | expiração |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `class_codes`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `class_id` | curso |
+| `code` | código |
+| `type` | tipo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `categories`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `name` | nome |
+| `image_url` | imagem |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `modules`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `category_id` | categoria |
+| `name` | nome |
+| `description` | descrição |
+| `is_free` | gratuito |
+| `show_percentage` | exibição de percentual |
+| `url` | URL |
+| `image` | imagem |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `class_modules`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `module_id` | módulo |
+| `class_id` | curso |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `contents`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `module_id` | módulo |
+| `name` | nome |
+| `description` | descrição |
+| `day` | organização temporal |
+| `position` | ordem |
+| `expiration_date` | expiração |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `module_client_statuses`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `content_id` | conteúdo |
+| `is_finished` | concluído |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `client_favorite_modules`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `module_id` | módulo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `client_last_access_modules`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `module_id` | módulo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `module_comments`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `content_id` | conteúdo |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `module_errors`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `content_id` | conteúdo |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+---
+
+## 6.3 ❓ Questions
+
+### `questions`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `user_id` | administrador criador |
+| `title` | enunciado |
+| `description` | contexto |
 | `explanation` | explicação |
-| `is_true` | valor lógico da resposta |
-| `is_accepted` | indicador de aprovação |
+| `is_true` | valor correto em V/F |
+| `is_accepted` | aceite |
 | `reason_refused` | motivo de recusa |
 | `is_from_client` | origem em cliente |
 | `ia_generated` | origem por IA |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.2 `question_responses`
-
-**Descrição:** respostas dadas pelos clientes às questões.
+### `question_responses`
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
-| `question_id` | questão respondida |
-| `client_id` | cliente que respondeu |
-| `client_response` | resposta enviada |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `client_response` | resposta |
 | `is_correct` | acerto/erro |
 | `is_current` | tentativa atual |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.3 `question_statistics`
-
-**Descrição:** agregados numéricos por questão.
+### `question_statistics`
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
-| `question_id` | questão relacionada |
-| `total_correct` | total de acertos |
-| `total_incorrect` | total de erros |
+| `question_id` | questão |
+| `total_correct` | acertos |
+| `total_incorrect` | erros |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.4 `filter_types`
-
-**Descrição:** categorias de filtros do domínio de questões.
+### `filter_types`
 
 | Campo | Descrição |
 |---|---|
@@ -360,11 +743,7 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.5 `filters`
-
-**Descrição:** valores de filtro aplicáveis às questões.
+### `filters`
 
 | Campo | Descrição |
 |---|---|
@@ -374,11 +753,7 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.6 `question_filters`
-
-**Descrição:** associação entre questões e filtros.
+### `question_filters`
 
 | Campo | Descrição |
 |---|---|
@@ -388,26 +763,18 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.7 `client_filters`
-
-**Descrição:** filtros salvos pelo cliente.
+### `client_filters`
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
 | `client_id` | cliente |
-| `name` | nome do filtro salvo |
-| `filter_ids` | composição do filtro |
+| `name` | nome do filtro |
+| `filter_ids` | lista de filtros |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
-
-## 6.8 `client_filter_folders`
-
-**Descrição:** pastas de organização de filtros do cliente.
+### `client_filter_folders`
 
 | Campo | Descrição |
 |---|---|
@@ -417,11 +784,35 @@ erDiagram
 | `created_at` | criação |
 | `updated_at` | atualização |
 
----
+### `question_comments`
 
-## 6.9 `question_comments`
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
 
-**Descrição:** comentários enviados pelo cliente sobre uma questão.
+### `question_errors`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `client_id` | cliente |
+| `text` | conteúdo |
+| `is_readed` | leitura |
+| `is_corrected` | correção |
+| `is_accepted` | aceite |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `question_reminders`
 
 | Campo | Descrição |
 |---|---|
@@ -437,45 +828,7 @@ erDiagram
 
 ---
 
-## 6.10 `question_errors`
-
-**Descrição:** apontamentos de erro vinculados a questões.
-
-| Campo | Descrição |
-|---|---|
-| `id` | identificador |
-| `question_id` | questão |
-| `client_id` | cliente |
-| `text` | conteúdo |
-| `is_readed` | leitura |
-| `is_corrected` | correção |
-| `is_accepted` | aceite |
-| `created_at` | criação |
-| `updated_at` | atualização |
-
----
-
-## 6.11 `question_reminders`
-
-**Descrição:** lembretes criados em contexto de questão.
-
-| Campo | Descrição |
-|---|---|
-| `id` | identificador |
-| `question_id` | questão |
-| `client_id` | cliente |
-| `text` | conteúdo |
-| `is_readed` | leitura |
-| `is_corrected` | correção |
-| `is_accepted` | aceite |
-| `created_at` | criação |
-| `updated_at` | atualização |
-
----
-
-# 7. Tabelas de Apoio Relacionadas
-
-## 7.1 Classificação jurídica
+## 6.4 🧠 Classificação Jurídica
 
 ### `disciplines`
 
@@ -516,13 +869,34 @@ erDiagram
 | `id` | identificador |
 | `question_id` | questão |
 | `sub_matter_id` | submatéria |
-| `position` | ordem/relevância |
+| `position` | relevância/ordem |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
 ---
 
-## 7.2 Reuso em simulados
+## 6.5 📝 Simulados
+
+### `mock_categories`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `name` | nome |
+| `is_free` | gratuito |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `mock_exams`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `category_id` | categoria |
+| `name` | nome |
+| `position` | ordem |
+| `created_at` | criação |
+| `updated_at` | atualização |
 
 ### `mock_questions`
 
@@ -531,84 +905,389 @@ erDiagram
 | `id` | identificador |
 | `question_id` | questão |
 | `mock_id` | simulado |
-| `position` | posição no simulado |
+| `position` | ordem da questão |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `mock_resolutions`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `mock_id` | simulado |
+| `client_id` | cliente |
+| `points` | pontuação |
+| `conclusion_time` | tempo de conclusão |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `mock_responses`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `resolution_id` | resolução |
+| `client_response` | resposta |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `class_mocks`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `mock_id` | simulado |
+| `class_id` | curso |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `mock_category_client_ratings`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `category_id` | categoria |
+| `client_id` | cliente |
+| `rating` | nota |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
 ---
 
-## 7.3 Vínculo educacional do usuário
+## 6.6 📚 Biblioteca & Materiais
 
-### `class_clients`
+### `libraries`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `name` | nome |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `library_files`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `library_id` | biblioteca |
+| `name` | nome do arquivo |
+| `file` | caminho/URL |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `content_files`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `file_id` | arquivo |
+| `content_id` | conteúdo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `file_client_statuses`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `file_id` | arquivo |
+| `client_id` | cliente |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+---
+
+## 6.7 📒 Organização Pessoal
+
+### `notebook_folders`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `name` | nome |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `notebooks`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `notebook_folder_id` | pasta |
+| `name` | nome |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `notebook_questions`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `question_id` | questão |
+| `notebook_id` | caderno |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+---
+
+## 6.8 📣 Comunicação & Marketing
+
+### `announcements`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `name` | nome |
+| `text` | conteúdo |
+| `class_id` | curso |
+| `type` | tipo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `notifications`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `title` | título |
+| `description` | descrição |
+| `icon` | ícone |
+| `announcement_id` | anúncio |
+| `class_id` | curso |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `client_readed_notifications`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `notification_id` | notificação |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `popups`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `class_id` | curso |
+| `for_paid_classes` | alunos pagantes |
+| `access_time` | tempo de exibição |
+| `mobile_picture` | imagem mobile |
+| `desktop_picture` | imagem desktop |
+| `link` | URL |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `popups_trackings`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `total_clicks` | total de cliques |
+| `click_date` | data do clique |
+| `popup_id` | popup |
+| `client_id` | cliente |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `promotional_landing_pages`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `promotional_title` | título |
+| `promotional_subtitle` | subtítulo |
+| `promotional_text` | texto |
+| `promotional_image` | imagem |
+| `promotional_button_text` | texto do CTA |
+| `promotional_rdstation_tag` | tag RD Station |
+| `class_id` | curso |
+| `is_active` | ativo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `promotional_landing_page_leads`
 
 | Campo | Descrição |
 |---|---|
 | `id` | identificador |
 | `client_id` | cliente |
 | `class_id` | curso |
-| `code_id` | código utilizado |
-| `is_canceled` | cancelamento |
-| `cancellation_reason` | motivo |
-| `is_refunded` | reembolso |
-| `is_lifetime` | acesso vitalício |
-| `expiration_date` | expiração |
+| `promo_lp_id` | landing page |
 | `created_at` | criação |
 | `updated_at` | atualização |
 
 ---
 
-# 8. Catálogo Consolidado
+## 6.9 🏆 Engajamento & Tracking
 
-## 8.1 Núcleo prioritário
+### `general_rankings`
 
-| Grupo | Tabelas |
+| Campo | Descrição |
 |---|---|
-| Identity | `clients`, `addresses`, `client_logins`, `client_logs`, `admins`, `roles`, `admin_roles` |
-| Questions | `questions`, `question_responses`, `question_statistics`, `filter_types`, `filters`, `question_filters`, `client_filters`, `client_filter_folders`, `question_comments`, `question_errors`, `question_reminders` |
-| Classificação | `disciplines`, `matters`, `sub_matters`, `question_sub_matters` |
+| `id` | identificador |
+| `client_id` | cliente |
+| `total` | pontuação total |
+| `created_at` | criação |
+| `updated_at` | atualização |
 
-## 8.2 Apoio contextual
+### `ranking_trackings`
 
-| Grupo | Tabelas |
+| Campo | Descrição |
 |---|---|
-| Simulados | `mock_questions` |
-| Educacional | `class_clients` |
+| `id` | identificador |
+| `client_id` | cliente |
+| `total_responses` | total de respostas |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `trackings`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `client_id` | cliente |
+| `action` | ação |
+| `created_at` | criação |
+| `updated_at` | atualização |
 
 ---
 
-# 9. Resumo Executivo
+## 6.10 🔌 Integrações & Operação
 
-## 9.1 Backbone principal
+### `webhooks`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `webhook_code` | código |
+| `data` | dados |
+| `webhook` | origem/tipo |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `whatsapp_events`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `phone_number` | número |
+| `wa_id` | id WhatsApp |
+| `ctwa_id` | id complementar |
+| `webhook_data` | payload |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `whatsapp_event_clients`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `phone_number` | número |
+| `wa_id` | id WhatsApp |
+| `ctwa_id` | id complementar |
+| `created_at` | criação |
+| `updated_at` | atualização |
+
+### `status_migrations`
+
+| Campo | Descrição |
+|---|---|
+| `client_id` | cliente |
+| `status` | estado |
+| `info` | informações adicionais |
+| `exception` | erro |
+| `started_at` | início |
+| `finished_at` | término |
+
+### `adonis_schema`
+
+| Campo | Descrição |
+|---|---|
+| `id` | identificador |
+| `name` | migration |
+| `batch` | lote |
+| `migration_time` | tempo de execução |
+
+### `adonis_schema_versions`
+
+| Campo | Descrição |
+|---|---|
+| `version` | versão atual do schema |
+
+---
+
+# 7. Catálogo Consolidado de Tabelas
+
+## 7.1 Tabelas por grupo
+
+| Grupo | Tabelas |
+|---|---|
+| Identidade & Acesso | `clients`, `admins`, `roles`, `admin_roles`, `addresses`, `client_logins`, `client_logs` |
+| Educacional | `classes`, `class_clients`, `class_codes`, `categories`, `modules`, `class_modules`, `contents`, `module_client_statuses`, `client_favorite_modules`, `client_last_access_modules`, `module_comments`, `module_errors` |
+| Questions | `questions`, `question_responses`, `question_statistics`, `filter_types`, `filters`, `question_filters`, `client_filters`, `client_filter_folders`, `question_comments`, `question_errors`, `question_reminders` |
+| Classificação Jurídica | `disciplines`, `matters`, `sub_matters`, `question_sub_matters` |
+| Simulados | `mock_categories`, `mock_exams`, `mock_questions`, `mock_resolutions`, `mock_responses`, `class_mocks`, `mock_category_client_ratings` |
+| Biblioteca & Materiais | `libraries`, `library_files`, `content_files`, `file_client_statuses` |
+| Organização Pessoal | `notebook_folders`, `notebooks`, `notebook_questions` |
+| Comunicação & Marketing | `announcements`, `notifications`, `client_readed_notifications`, `popups`, `popups_trackings`, `promotional_landing_pages`, `promotional_landing_page_leads` |
+| Engajamento & Tracking | `general_rankings`, `ranking_trackings`, `trackings` |
+| Integrações & Operação | `webhooks`, `whatsapp_events`, `whatsapp_event_clients`, `status_migrations`, `adonis_schema`, `adonis_schema_versions` |
+
+---
+
+# 8. Resumo Executivo
+
+## 8.1 Síntese do recorte
+
+O modelo cobre todas as áreas principais da plataforma, mas o eixo de maior densidade funcional é o domínio de **questions**, que centraliza:
+
+- autoria administrativa
+- classificação por filtros
+- classificação jurídica
+- respostas do aluno
+- estatísticas
+- comentários
+- registro de erros
+- lembretes
+- reuso em simulados
+- salvamento em cadernos
+
+## 8.2 Backbone principal
 
 ```text
+clients
+├── class_clients
+├── question_responses
+├── question_comments
+├── question_errors
+├── question_reminders
+├── notebooks
+├── mock_resolutions
+└── trackings
+
 admins
 └── questions
-    ├── question_responses
-    │   └── clients
     ├── question_statistics
     ├── question_filters
-    │   └── filters
-    │       └── filter_types
     ├── question_sub_matters
-    │   └── sub_matters
-    │       └── matters
-    │           └── disciplines
-    ├── question_comments
-    ├── question_errors
-    ├── question_reminders
-    └── mock_questions
+    ├── mock_questions
+    └── notebook_questions
 ```
 
-## 9.2 Síntese
+## 8.3 Uso recomendado deste documento
 
-O modelo evidencia dois núcleos mais fortes neste recorte:
+Este material é adequado para:
 
-- **Identity**
-- **Questions**
-
-Esse conjunto já sustenta leitura suficiente para:
-
-- entendimento de domínio
 - documentação de legado
-- desenho de integração
-- refactor por contexto funcional
+- onboarding técnico
+- entendimento de domínio
+- desenho de integrações
+- base para futura modularização
