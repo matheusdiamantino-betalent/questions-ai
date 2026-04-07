@@ -1,4 +1,4 @@
-[# 🔄 PR 08 — Fase 1: Persistência Mínima da Operação de Ingestion
+# 🔄 PR 08 — Fase 1: Persistência Mínima da Operação de Ingestion
 ## Continuação do primeiro uso funcional do usuário autenticado no fluxo de entrada
 
 ---
@@ -16,7 +16,7 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR é continuação direta da PR 07 e NÃO redefine arquitetura.
+> Esta PR é continuação direta da PR 07 e **não redefine arquitetura**.
 >
 > Ela apenas introduz o próximo passo funcional mínimo:
 >
@@ -106,13 +106,36 @@ A única mudança é registrar o estado da operação.
 ## 6. Fluxo
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#0b1020",
+    "primaryColor": "#111827",
+    "primaryTextColor": "#e5f0ff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#38bdf8",
+    "secondaryColor": "#0f172a",
+    "tertiaryColor": "#111827",
+    "fontFamily": "Inter, Segoe UI, Arial",
+    "clusterBkg": "#0f172a",
+    "clusterBorder": "#334155"
+  }
+}}%%
 flowchart LR
-    A[Request] --> B[AuthGuard]
-    B --> C[Controller]
-    C --> D[Service]
-    D --> E[Create Record]
-    E --> F[Store In Memory]
-    F --> G[Return]
+    A[HTTP Request]:::node --> B[AuthGuard]:::auth
+    B --> C[IngestionController]:::controller
+    C --> D[IngestionService]:::service
+    D --> E[Create Ingestion Record]:::domain
+    E --> F[Persist Minimal State]:::storage
+    F --> G[Return Ingestion Record]:::result
+
+    classDef node fill:#0f172a,stroke:#22d3ee,color:#e5f0ff,stroke-width:2px;
+    classDef auth fill:#111827,stroke:#a78bfa,color:#f5f3ff,stroke-width:2px;
+    classDef controller fill:#0b1220,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
+    classDef service fill:#111827,stroke:#22c55e,color:#ecfdf5,stroke-width:2px;
+    classDef domain fill:#1e1b4b,stroke:#8b5cf6,color:#ede9fe,stroke-width:2px;
+    classDef storage fill:#082f49,stroke:#06b6d4,color:#ecfeff,stroke-width:2px;
+    classDef result fill:#052e16,stroke:#22c55e,color:#f0fdf4,stroke-width:2px;
 ```
 
 ---
