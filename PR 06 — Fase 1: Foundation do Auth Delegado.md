@@ -21,7 +21,7 @@
 - [2. Contexto e objetivo](#2-contexto-e-objetivo)
 - [3. Decisão arquitetural](#3-decisão-arquitetural)
 - [4. Escopo e fora de escopo](#4-escopo-e-fora-de-escopo)
-- [5. Contratos e versionamento](#5-contratos-e-versionamento)
+- [5. Contratos](#5-contratos)
 - [6. Estrutura técnica](#6-estrutura-técnica)
 - [7. Fluxo do auth delegado](#7-fluxo-do-auth-delegado)
 - [8. Responsabilidades por arquivo](#8-responsabilidades-por-arquivo)
@@ -39,7 +39,7 @@
 >
 > - receber `Authorization: Bearer <token>`;
 > - consultar a API principal;
-> - reconhecer o contrato do endpoint de perfil;
+> - preservar o contrato externo relevante do endpoint de perfil;
 > - reduzir localmente o payload autenticado para `request.user.id`;
 > - proteger rotas HTTP locais.
 >
@@ -57,14 +57,14 @@ Este PR faz a API de IA consumir remotamente essa identidade, sem duplicar login
 
 - a API principal continua autenticando;
 - a API de IA consome o perfil autenticado remotamente;
-- a API de IA reconhece explicitamente o boundary do endpoint de perfil;
+- a API de IA preserva explicitamente o contrato externo relevante do endpoint de perfil;
 - a API de IA reduz localmente apenas o payload anexado em `request.user`;
 - a API de IA protege rotas locais com `AuthGuard`.
 
 ```text
 API principal autentica.
 API de IA consome o perfil autenticado.
-API de IA reconhece o boundary da integração.
+API de IA preserva o contrato externo do endpoint de perfil.
 API de IA reduz apenas request.user.id.
 API de IA protege a borda HTTP local.
 ```
@@ -92,7 +92,7 @@ A API de IA:
 - não acessa o Redis do auth principal;
 - não reimplementa login administrativo;
 - não adiciona autorização rica local neste slice;
-- reconhece o contrato útil do endpoint remoto;
+- preserva o contrato útil do endpoint remoto;
 - reduz localmente apenas o payload anexado à request.
 
 ---
@@ -108,7 +108,7 @@ A API de IA:
 ```text
 Auth continua centralizado na API principal.
 A API de IA consome a identidade autenticada via HTTP.
-A API de IA reconhece o contrato do endpoint de perfil.
+A API de IA preserva o contrato do endpoint de perfil.
 A API de IA reduz apenas request.user ao mínimo necessário.
 ```
 
@@ -131,7 +131,6 @@ A API de IA reduz apenas request.user ao mínimo necessário.
 - receber `Authorization: Bearer <token>`;
 - chamar `GET /api/v1/profile` da API principal;
 - representar o contrato externo relevante;
-- reconhecer esse contrato no boundary da API de IA;
 - validar o `id` recebido;
 - transformar o resultado em `AuthenticatedUser`;
 - anexar `request.user`;
@@ -153,9 +152,9 @@ A API de IA reduz apenas request.user ao mínimo necessário.
 
 ---
 
-## 5. Contratos e versionamento
+## 5. Contratos
 
-Para manter o boundary explícito sem inflar o slice, este PR usa versionamento simples apenas onde isso agrega clareza.
+Para manter o boundary explícito sem inflar o slice, este PR preserva dois níveis de contrato: o contrato externo relevante da API principal e o contrato interno mínimo local.
 
 ### 5.1 Contrato externo da API principal
 
@@ -163,19 +162,7 @@ Tudo que representa o contrato real da API principal usa o prefixo:
 
 - `MainApiV1...`
 
-### 5.2 Contrato reconhecido pela API de IA
-
-Tudo que representa o contrato do boundary de integração reconhecido dentro da API de IA usa o prefixo:
-
-- `AiAuthV1...`
-
-### 5.3 Contrato interno mínimo
-
-O contrato interno resolvido para uso local continua mínimo e direto:
-
-- `AuthenticatedUser`
-
-### 5.4 Endpoint autenticado consumido
+### 5.2 Endpoint autenticado consumido
 
 ```http
 GET /api/v1/profile
@@ -183,7 +170,7 @@ Authorization: Bearer <token>
 Accept: application/json
 ```
 
-### 5.5 Contrato externo relevante
+### 5.3 Contrato externo relevante
 
 ```ts
 export type MainApiV1AdminRoleResponse = {
@@ -200,24 +187,7 @@ export type MainApiV1AdminProfileResponse = {
 };
 ```
 
-### 5.6 Contrato reconhecido pela API de IA
-
-```ts
-export type AiAuthV1Role = {
-  id: number;
-  name?: string;
-  slug?: string;
-};
-
-export type AiAuthV1AdminProfile = {
-  id: number | string;
-  name?: string;
-  email?: string;
-  roles?: AiAuthV1Role[];
-};
-```
-
-### 5.7 Contrato interno mínimo anexado à request
+### 5.4 Contrato interno mínimo anexado à request
 
 ```ts
 export type AuthenticatedUser = {
@@ -226,15 +196,14 @@ export type AuthenticatedUser = {
 ```
 
 > [!IMPORTANT]
-> O contrato reconhecido pela API de IA não deve empobrecer artificialmente o contrato da API principal.
+> O contrato externo da API principal não deve ser empobrecido artificialmente.
 >
 > A simplificação acontece apenas no payload local anexado à request.
 
-### 5.8 Regra de transformação
+### 5.5 Regra de transformação
 
 ```text
 MainApiV1AdminProfileResponse
-→ AiAuthV1AdminProfile
 → validação local do id
 → AuthenticatedUser
 ```
@@ -277,7 +246,7 @@ src/
 ### Leitura da estrutura
 
 - `infra` concentra client, guard e service;
-- `model/v1` concentra contrato externo, contrato reconhecido e contrato interno mínimo;
+- `model/v1` concentra contrato externo relevante e contrato interno mínimo;
 - `auth.module.ts` compõe o módulo;
 - `health` valida o fluxo ponta a ponta;
 - `app.module.ts` e `main.ts` fecham o wiring mínimo da aplicação;
@@ -314,13 +283,12 @@ flowchart TD
     C --> D["🌐 AuthApiClient"]
     D --> E["🏛️ GET /api/v1/profile"]
     E --> F["📦 MainApiV1AdminProfileResponse"]
-    F --> G["🧩 AiAuthV1AdminProfile"]
-    G --> H["🔎 validação local do id"]
-    H --> I["👤 AuthenticatedUser"]
-    I --> J["📌 request.user.id"]
-    J --> K["✅ Request protegida"]
+    F --> G["🔎 validação local do id"]
+    G --> H["👤 AuthenticatedUser"]
+    H --> I["📌 request.user.id"]
+    I --> J["✅ Request protegida"]
 
-    style K fill:#071910,stroke:#22c55e,stroke-width:2px,color:#dcfce7
+    style J fill:#071910,stroke:#22c55e,stroke-width:2px,color:#dcfce7
 ```
 
 ---
@@ -332,7 +300,6 @@ flowchart TD
 Define:
 
 - `MainApiV1...`
-- `AiAuthV1...`
 - `AuthenticatedUser`
 
 ### `src/modules/auth/infra/clients/auth-api.client.ts`
@@ -348,8 +315,7 @@ Responsável por:
 Responsável por:
 
 - chamar o client;
-- reconhecer o contrato da integração dentro da IA;
-- validar o `id` do payload;
+- validar o `id` do payload remoto;
 - transformar o resultado em `AuthenticatedUser`.
 
 ### `src/modules/auth/infra/guards/auth.guard.ts`
@@ -526,12 +492,12 @@ GET /health/protected
 
 Este PR implementa a foundation correta do auth da Fase 1:
 
-**consumo remoto da identidade administrativa da API principal, reconhecimento explícito do contrato do endpoint de perfil e resolução segura de `request.user.id` na API de IA.**
+**consumo remoto da identidade administrativa da API principal, preservação explícita do contrato do endpoint de perfil e resolução segura de `request.user.id` na API de IA.**
 
 ### Síntese final
 
 A API principal autentica.  
 A API de IA consome a identidade autenticada.  
-A API de IA reconhece o boundary da integração.  
+A API de IA preserva o contrato externo do endpoint de perfil.  
 A API de IA reduz apenas o payload anexado à request.  
 A API de IA protege a borda HTTP local.
