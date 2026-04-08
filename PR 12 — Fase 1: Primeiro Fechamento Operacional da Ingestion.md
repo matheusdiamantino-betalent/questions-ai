@@ -1,6 +1,6 @@
 # 🔄 PR 12 — Fase 1: Primeiro Fechamento Operacional da Ingestion
 
-## Transição mínima do primeiro consumo operacional para o primeiro encerramento controlado da operação
+## Transição mínima do consumo para o fechamento operacional inicial da ingestion
 
 ---
 
@@ -19,10 +19,10 @@
 > [!IMPORTANT]
 > Esta PR é continuação direta das **PRs 06, 07, 08, 09, 10 e 11** e introduz apenas o próximo passo funcional mínimo da operação de `ingestion`.
 >
-> * manter a abertura persistida da operação
-> * manter o primeiro dispatch mínimo já introduzido
-> * manter o primeiro consumo operacional mínimo já introduzido
-> * introduzir o **primeiro fechamento operacional mínimo**
+> - manter a abertura persistida da operação
+> - manter o primeiro dispatch mínimo já introduzido
+> - manter o primeiro consumo operacional mínimo já introduzido
+> - introduzir o **primeiro fechamento operacional mínimo**
 >
 > **Esta PR não implementa pipeline completo, múltiplos workers, retries, DLQ, orquestração expandida ou processamento rico de domínio.**
 
@@ -48,12 +48,12 @@
 
 A progressão da Fase 1 até aqui foi:
 
-* **PR 06** → foundation mínima de autenticação delegada
-* **PR 07** → propagação do usuário autenticado até `ingestion`
-* **PR 08** → persistência inicial mínima da operação
-* **PR 09** → foundation mínima de Redis e database access compartilhado
-* **PR 10** → primeiro dispatch operacional mínimo
-* **PR 11** → primeiro consumo operacional mínimo
+- **PR 06** → foundation mínima de autenticação delegada
+- **PR 07** → propagação do usuário autenticado até `ingestion`
+- **PR 08** → persistência inicial mínima da operação
+- **PR 09** → foundation mínima de Redis e database access compartilhado
+- **PR 10** → primeiro dispatch operacional mínimo
+- **PR 11** → primeiro consumo operacional mínimo
 
 A **PR 12** continua esse fluxo sem reprojetar a aplicação.
 
@@ -71,18 +71,18 @@ Introduzir o primeiro fechamento operacional mínimo da operação de `ingestion
 
 Esta PR deve permitir apenas:
 
-* receber uma `ingestion` já consumida
-* validar a existência da operação em processamento
-* executar o **efeito mínimo final da operação**
-* atualizar o estado da `ingestion` de `processing` para `completed`
+- receber uma `ingestion` já consumida
+- validar a existência da operação em processamento
+- concluir a operação de forma mínima e explícita
+- atualizar o estado da `ingestion` de `processing` para `completed`
 
 ### Resultado esperado
 
 Ao final desta PR, a aplicação deve ser capaz de:
 
-* retirar a `ingestion` do estado intermediário de processamento
-* refletir seu primeiro encerramento operacional controlado
-* manter rastreabilidade básica do ciclo **abertura → dispatch → consumo → fechamento mínimo**
+- retirar a `ingestion` do estado intermediário de processamento
+- refletir seu primeiro encerramento operacional controlado
+- manter rastreabilidade básica do ciclo **abertura → dispatch → consumo → fechamento mínimo**
 
 > [!NOTE]
 > O objetivo desta PR **não** é executar pipeline completo, etapas de negócio ricas ou múltiplas fases da operação.
@@ -103,20 +103,22 @@ Esta PR apenas adiciona o próximo comportamento funcional mínimo necessário s
 
 ### Isso significa
 
-* reaproveitar a foundation mínima de persistência e Redis já introduzida
-* reaproveitar o consumo mínimo já introduzido
-* introduzir apenas o **primeiro encerramento operacional controlado**
-* manter o fluxo explícito, pequeno e revisável
-* evitar antecipação de múltiplos steps, retries, coordenação rica ou pipeline completo
+- reaproveitar a foundation mínima de persistência e Redis já introduzida
+- reaproveitar o consumo mínimo já introduzido
+- introduzir apenas o **primeiro encerramento operacional controlado**
+- manter o fluxo explícito, pequeno e revisável
+- evitar antecipação de múltiplos steps, retries, coordenação rica ou pipeline completo
 
 ### Boundary exato desta PR
 
 O fechamento introduzido aqui deve ser entendido apenas como:
 
-* resolução da operação já consumida
-* validação de existência da `ingestion`
-* execução do efeito mínimo final da operação
-* atualização mínima de estado para `completed`
+- resolução da operação já consumida
+- validação de existência da `ingestion`
+- conclusão mínima da operação
+- atualização mínima de estado para `completed`
+
+Nesta PR, **fechamento mínimo** significa apenas concluir a operação já consumida mediante validação de existência da `ingestion` e atualização de status de `processing` para `completed`, **sem introduzir etapas adicionais de domínio**.
 
 Nada além disso é objetivo desta entrega.
 
@@ -126,29 +128,29 @@ Nada além disso é objetivo desta entrega.
 
 Esta PR inclui:
 
-* primeiro fechamento operacional mínimo da `ingestion`
-* evolução mínima do estado da operação após o primeiro consumo
-* reaproveitamento da foundation de Redis já existente
-* preservação da rastreabilidade da operação aberta, despachada, consumida e concluída minimamente
-* evolução do comportamento do módulo de ingestion sem abrir nova fundação
+- primeiro fechamento operacional mínimo da `ingestion`
+- evolução mínima do estado da operação após o primeiro consumo
+- reaproveitamento da foundation de Redis já existente
+- preservação da rastreabilidade da operação aberta, despachada, consumida e concluída minimamente
+- evolução do comportamento do módulo de ingestion sem abrir nova fundação
 
 ### Em termos de implementação
 
 Espera-se que esta PR cubra:
 
-* resolução do `ingestionId` já consumido
-* validação da existência da operação persistida
-* execução do efeito mínimo final da operação
-* atualização objetiva de status de `processing` para `completed`
-* manutenção do contrato pequeno e aderente ao recorte
+- resolução do `ingestionId` já consumido
+- validação da existência da operação persistida
+- conclusão mínima da operação já em processamento
+- atualização objetiva de status de `processing` para `completed`
+- manutenção do contrato pequeno e aderente ao recorte
 
 ### Unidade mínima concluída nesta PR
 
 A unidade operacional mínima desta entrega deve continuar sendo simples:
 
-* origem: item já consumido do Redis
-* unidade operacional: `ingestionId`
-* efeito persistido: atualização do status final da operação
+- origem: item já consumido do Redis
+- unidade operacional: `ingestionId`
+- efeito persistido: atualização do status final da operação
 
 > [!IMPORTANT]
 > O recorte desta PR termina na transição controlada de `processing` para `completed`.
@@ -161,23 +163,25 @@ A unidade operacional mínima desta entrega deve continuar sendo simples:
 
 Esta PR **não** inclui:
 
-* BullMQ completo
-* múltiplos workers
-* retries
-* DLQ
-* orchestration de steps
-* extraction
-* classification
-* resolution
-* publication
-* histórico rico de execução
-* tabela de eventos
-* state machine
-* abstração genérica de worker
-* infraestrutura expandida de processamento
-* estrutura de pipeline completa
-* processamento de domínio rico após o fechamento mínimo
-* handlers genéricos, processors reutilizáveis ou infraestrutura preparada para próximos consumers
+- uso avançado de BullMQ
+- múltiplas filas
+- retries
+- backoff
+- DLQ
+- flows
+- orquestração expandida
+- extraction
+- classification
+- resolution
+- publication
+- histórico rico de execução
+- tabela de eventos
+- state machine
+- abstração genérica de worker
+- infraestrutura expandida de processamento
+- estrutura de pipeline completa
+- processamento de domínio rico após o fechamento mínimo
+- handlers genéricos, processors reutilizáveis ou infraestrutura preparada para próximos consumers
 
 > [!NOTE]
 > A regra permanece a mesma:
@@ -263,12 +267,14 @@ created -> queued -> processing -> completed
 
 ### Regra importante
 
+Fora a materialização explícita do estado `completed`, esta PR **não amplia** contratos de payload, processamento ou execução.
+
 Esta PR não deve inflar os contratos com:
 
-* metadados ricos de worker
-* payloads completos de processamento
-* contratos de pipeline
-* estruturas futuras ainda não consumidas
+- metadados ricos de worker
+- payloads completos de processamento
+- contratos de pipeline
+- estruturas futuras ainda não consumidas
 
 ---
 
@@ -278,35 +284,35 @@ Esta PR não deve inflar os contratos com:
 
 O fluxo de `ingestion` deve:
 
-* continuar simples
-* continuar recebendo dados explícitos
-* manter a persistência inicial da operação
-* manter o dispatch mínimo já introduzido
-* manter o consumo mínimo já introduzido
-* realizar o fechamento mínimo da operação em processamento
-* manter rastreabilidade do avanço operacional
-* não absorver infraestrutura futura desnecessária
+- continuar simples
+- continuar recebendo dados explícitos
+- manter a persistência inicial da operação
+- manter o dispatch mínimo já introduzido
+- manter o consumo mínimo já introduzido
+- realizar o fechamento mínimo da operação em processamento
+- manter rastreabilidade do avanço operacional
+- não absorver infraestrutura futura desnecessária
 
 ### Consumer
 
 O consumer deve continuar sendo:
 
-* mínimo
-* explícito
-* específico para este caso de uso
-* aderente à foundation já introduzida
-* sem abstração genérica de worker
-* sem mini-framework de processamento
-* sem preparação estrutural para múltiplos consumers futuros
+- mínimo
+- explícito
+- específico para este caso de uso
+- aderente à foundation já introduzida
+- sem abstração genérica de worker
+- sem mini-framework de processamento
+- sem preparação estrutural para múltiplos consumers futuros
 
-### Efeito mínimo esperado do fechamento
+### Fechamento mínimo esperado
 
 O fechamento desta PR deve fazer apenas:
 
 1. receber a operação já consumida
 2. resolver o `ingestionId`
 3. validar a existência da operação
-4. executar o efeito mínimo final da operação
+4. concluir a operação de forma mínima
 5. atualizar o status da operação para `completed`
 
 Se fizer além disso, o recorte está expandindo indevidamente.
@@ -315,17 +321,17 @@ Se fizer além disso, o recorte está expandindo indevidamente.
 
 A persistência deve:
 
-* continuar usando o ponto compartilhado já consolidado
-* manter o fluxo fácil de seguir
-* preservar o estado operacional mínimo da operação
+- continuar usando o ponto compartilhado já consolidado
+- manter o fluxo fácil de seguir
+- preservar o estado operacional mínimo da operação
 
 ### Configuração
 
 A configuração deve:
 
-* permanecer centralizada no `environment.ts`
-* seguir o padrão já adotado com Zod
-* não espalhar leitura de `process.env`
+- permanecer centralizada no `environment.ts`
+- seguir o padrão já adotado com Zod
+- não espalhar leitura de `process.env`
 
 ---
 
@@ -333,15 +339,15 @@ A configuração deve:
 
 O review desta PR deve validar se:
 
-* a PR 12 é continuação natural das PRs 06, 07, 08, 09, 10 e 11
-* a `ingestion` passa a ter primeiro fechamento operacional real
-* o fechamento foi introduzido sem overengineering
-* Redis foi usado de forma mínima e aderente ao recorte
-* o fluxo continua simples
-* a evolução de estado da operação permanece pequena e coerente
-* o recorte continua pequeno, revisável e sem pipeline prematuro
-* o fechamento introduzido está limitado a **resolução da operação + efeito mínimo final + atualização de status**
-* não há worker genérico, processor reutilizável ou fundação paralela escondida nesta entrega
+- a PR 12 é continuação natural das PRs 06, 07, 08, 09, 10 e 11
+- a `ingestion` passa a ter primeiro fechamento operacional real
+- o fechamento foi introduzido sem overengineering
+- Redis foi usado de forma mínima e aderente ao recorte
+- o fluxo continua simples
+- a evolução de estado da operação permanece pequena e coerente
+- o recorte continua pequeno, revisável e sem pipeline prematuro
+- o fechamento introduzido está limitado a **resolução da operação + conclusão mínima + atualização de status**
+- não há worker genérico, processor reutilizável ou fundação paralela escondida nesta entrega
 
 ---
 
@@ -349,15 +355,15 @@ O review desta PR deve validar se:
 
 Esta PR pode ser considerada aceita se:
 
-* [ ] a operação de `ingestion` continuar sendo aberta corretamente
-* [ ] o dispatch mínimo continuar funcionando
-* [ ] o primeiro consumo operacional mínimo continuar funcionando
-* [ ] existir o primeiro fechamento operacional mínimo da operação
-* [ ] a operação puder refletir a transição de `processing` para `completed`
-* [ ] Redis for utilizado de forma mínima e sem abstração excessiva
-* [ ] o recorte permanecer pequeno, funcional e revisável
-* [ ] não houver antecipação indevida de pipeline completo
-* [ ] não houver expansão indevida para worker, processor ou infraestrutura assíncrona mais rica
+- [ ] a operação de `ingestion` continuar sendo aberta corretamente
+- [ ] o dispatch mínimo continuar funcionando
+- [ ] o primeiro consumo operacional mínimo continuar funcionando
+- [ ] existir o primeiro fechamento operacional mínimo da operação
+- [ ] a operação puder refletir a transição de `processing` para `completed`
+- [ ] Redis for utilizado de forma mínima e sem abstração excessiva
+- [ ] o recorte permanecer pequeno, funcional e revisável
+- [ ] não houver antecipação indevida de pipeline completo
+- [ ] não houver expansão indevida para worker, processor ou infraestrutura assíncrona mais rica
 
 ---
 
@@ -369,13 +375,12 @@ A PR 12 introduz o próximo passo correto da Fase 1:
 
 Em resumo:
 
-* **PR 06** consolidou a borda autenticada
-* **PR 07** propagou a identidade até o domínio
-* **PR 08** materializou a operação inicial
-* **PR 09** consolidou a foundation compartilhada
-* **PR 10** introduziu o primeiro dispatch operacional real
-* **PR 11** introduziu o primeiro consumo operacional
-* **PR 12** introduz o primeiro fechamento operacional
+- **PR 06** consolidou a borda autenticada
+- **PR 07** propagou a identidade até o domínio
+- **PR 08** materializou a operação inicial
+- **PR 09** consolidou a foundation compartilhada
+- **PR 10** introduziu o primeiro dispatch operacional real
+- **PR 11** introduziu o primeiro consumo operacional
+- **PR 12** introduz o primeiro fechamento operacional
 
-
-A **PR 13** deve ser o próximo passo apenas se houver necessidade real de introduzir **erro mínimo explícito (`failed`)** ou o **primeiro efeito funcional real de domínio**, ainda sem pipeline completo.
+As próximas evoluções devem ser tratadas em PR própria, apenas se houver necessidade real e **sem expandir indevidamente o recorte desta fase**.
