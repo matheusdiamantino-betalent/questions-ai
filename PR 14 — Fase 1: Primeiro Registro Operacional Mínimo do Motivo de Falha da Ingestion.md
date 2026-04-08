@@ -6,7 +6,7 @@
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-14-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-minimal%20failure%20reason%20foundation-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Tipo](https://img.shields.io/badge/tipo-minimal%20failure%20reason%20persistence-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
 ![Escopo](https://img.shields.io/badge/escopo-ingestion%20failure%20reason-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
@@ -75,7 +75,7 @@ Introduzir o primeiro registro operacional mínimo do motivo de falha da operaç
 Esta PR deve permitir apenas:
 
 - receber uma `ingestion` já consumida
-- validar a existência da operação em processamento
+- validar a existência da operação persistida
 - manter o caminho feliz já existente
 - capturar falha mínima de execução
 - persistir um motivo mínimo de falha quando houver erro
@@ -124,10 +124,19 @@ O registro de falha introduzido aqui deve ser entendido apenas como:
 
 - captura mínima de erro durante a execução consumida
 - validação de existência da `ingestion`
-- persistência mínima de um motivo de falha
-- atualização mínima de estado para `failed`
+- persistência mínima do encerramento terminal de falha em **uma única atualização explícita**
+- atualização do status para `failed` com o respectivo `failureReason`
 
 Nesta PR, **registro mínimo do motivo de falha** significa apenas persistir uma informação pequena, objetiva e suficiente para indicar por que a operação terminou em erro, **sem introduzir taxonomia de exceções, stack trace persistido ou sistema de observabilidade completo**.
+
+### Regra de precisão desta entrega
+
+Quando ocorrer erro durante o processamento consumido, o encerramento terminal deve ocorrer de forma objetiva por meio de **uma única atualização persistida**, contendo:
+
+- `status: 'failed'`
+- `failureReason: string`
+
+Isso evita ambiguidade de implementação e mantém o recorte pequeno.
 
 Nada além disso é objetivo desta entrega.
 
@@ -151,8 +160,8 @@ Espera-se que esta PR cubra:
 - resolução do `ingestionId` já consumido
 - validação da existência da operação persistida
 - captura mínima de erro na execução consumida
-- persistência objetiva do motivo mínimo de falha
-- atualização objetiva de status para `failed` com registro mínimo do erro
+- derivação de um `failureReason` mínimo e previsível
+- atualização objetiva da operação para `failed` com persistência do motivo do erro
 - manutenção do contrato pequeno e aderente ao recorte
 
 ### Unidade mínima concluída nesta PR
@@ -161,7 +170,7 @@ A unidade operacional mínima desta entrega deve continuar sendo simples:
 
 - origem: item já consumido do Redis
 - unidade operacional: `ingestionId`
-- efeito persistido: atualização do status terminal da operação em caso de falha
+- efeito persistido: encerramento terminal da operação em caso de falha
 - dado adicional persistido: motivo mínimo de falha
 
 > [!IMPORTANT]
@@ -191,6 +200,7 @@ Esta PR **não** inclui:
 - infraestrutura expandida de resiliência
 - pipeline completo de processamento
 - handlers genéricos, processors reutilizáveis ou infraestrutura preparada para próximos consumers
+- error codes, categorias de falha ou metadata expandida de erro
 
 > [!NOTE]
 > A regra permanece a mesma:
@@ -227,10 +237,9 @@ flowchart LR
     G --> H[Update Ingestion Status to Queued]:::database
     H --> I[Consume Queued Ingestion Id]:::consumer
     I --> J[Update Ingestion Status to Processing]:::database
-    J --> K{Minimal Execution Result}:::decision
+    J --> K{Processing Outcome}:::decision
     K -->|Success| L[Update Ingestion Status to Completed]:::database
-    K -->|Failure| M[Persist Minimal Failure Reason]:::database
-    M --> N[Update Ingestion Status to Failed]:::database
+    K -->|Failure| M[Update Failed Status With Failure Reason]:::database
 
     classDef http fill:#111827,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
     classDef auth fill:#111827,stroke:#a78bfa,color:#f5f3ff,stroke-width:2px;
@@ -243,7 +252,7 @@ flowchart LR
 ```
 
 > [!IMPORTANT]
-> Neste recorte, o caminho de falha continua entrando apenas como **primeiro encerramento terminal mínimo de erro após o consumo**, com o acréscimo de um motivo mínimo persistido, e não como modelagem completa de erros.
+> Neste recorte, o caminho de falha continua entrando apenas como **primeiro encerramento terminal mínimo de erro após o consumo**, agora com **uma única persistência explícita** contendo o estado terminal e o motivo mínimo da falha.
 
 ---
 
@@ -276,6 +285,21 @@ export type IngestionRecord = {
   updatedAt: Date;
 };
 ```
+
+### Regra mínima do `failureReason`
+
+O `failureReason` desta PR deve seguir apenas a regra mínima abaixo:
+
+- ser uma `string`
+- ser curta e objetiva
+- ser derivada do erro capturado durante o processamento
+- possuir fallback previsível caso não exista mensagem utilizável
+
+### Comportamento esperado do campo
+
+- `failureReason` deve permanecer `null` enquanto a operação não tiver encerrado em falha
+- `failureReason` deve ser preenchido apenas no encerramento terminal com `status: 'failed'`
+- `failureReason` não deve carregar stack trace, metadata expandida ou estrutura rica de erro
 
 ### Evolução de estado esperada nesta PR
 
@@ -326,6 +350,8 @@ O consumer deve continuar sendo:
 - sem abstração genérica de worker
 - sem mini-framework de processamento
 - sem preparação estrutural para múltiplos consumers futuros
+- sem normalizador genérico de erro
+- sem classificador expandido de falhas
 
 ### Tratamento mínimo de falha esperado
 
@@ -333,10 +359,12 @@ O tratamento desta PR deve fazer apenas:
 
 1. receber a operação já consumida
 2. resolver o `ingestionId`
-3. validar a existência da operação
+3. validar a existência da operação persistida
 4. capturar erro mínimo da execução
-5. persistir o motivo mínimo da falha
-6. atualizar o status da operação para `failed`
+5. derivar um `failureReason` mínimo
+6. encerrar a operação em **uma única atualização persistida** com:
+   - `status: 'failed'`
+   - `failureReason`
 
 Se fizer além disso, o recorte está expandindo indevidamente.
 
@@ -348,6 +376,7 @@ A persistência deve:
 - manter o fluxo fácil de seguir
 - preservar o estado operacional mínimo da operação
 - permitir persistência do motivo mínimo de falha sem abrir infraestrutura paralela
+- realizar o encerramento terminal de falha de forma objetiva e explícita
 
 ### Configuração
 
@@ -366,11 +395,12 @@ O review desta PR deve validar se:
 - a PR 14 é continuação natural das PRs 06, 07, 08, 09, 10, 11, 12 e 13
 - a `ingestion` continua com caminho feliz mínimo e caminho terminal mínimo de falha
 - o motivo de falha foi introduzido de forma pequena e aderente ao recorte
+- o encerramento terminal de falha acontece em **uma única atualização persistida**
 - Redis continua sendo usado de forma mínima e aderente ao recorte
 - o fluxo continua simples
 - a evolução de contrato da operação permanece pequena e coerente
 - o recorte continua pequeno, revisável e sem infraestrutura prematura de erro ou resiliência
-- o tratamento introduzido está limitado a **captura mínima de erro + persistência mínima do motivo + conclusão terminal explícita**
+- o tratamento introduzido está limitado a **captura mínima de erro + derivação mínima do motivo + encerramento terminal explícito**
 - não há retry engine, DLQ, framework de worker, taxonomia rica de erros ou fundação paralela escondida nesta entrega
 
 ---
@@ -386,6 +416,7 @@ Esta PR pode ser considerada aceita se:
 - [ ] o primeiro tratamento operacional mínimo de falha continuar funcionando
 - [ ] existir o primeiro registro operacional mínimo do motivo de falha da operação
 - [ ] a operação puder refletir a transição terminal para `failed` com persistência mínima do motivo do erro
+- [ ] o encerramento terminal de falha ocorrer em uma única atualização persistida
 - [ ] Redis for utilizado de forma mínima e sem abstração excessiva
 - [ ] o recorte permanecer pequeno, funcional e revisável
 - [ ] não houver antecipação indevida de retries, DLQ, taxonomia rica de erro ou observabilidade expandida
