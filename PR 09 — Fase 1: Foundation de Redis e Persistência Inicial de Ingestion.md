@@ -16,15 +16,13 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR é continuação direta das **PRs 06, 07 e 08** e **não redefine a arquitetura**.
->
-> Ela introduz apenas o próximo passo funcional mínimo da foundation de infraestrutura:
+> Esta PR é continuação direta das **PRs 06, 07 e 08** e introduz apenas o próximo passo funcional mínimo da infraestrutura compartilhada da aplicação:
 >
 > - estruturar o acesso ao **Redis**
 > - consolidar o acesso ao **banco operacional**
 > - persistir o primeiro estado real da operação de `ingestion`
 >
-> **Este PR não cria login local, não cria tabela de login, não expande auth e não introduz fila, pipeline completo ou abstrações genéricas de storage.**
+> O foco desta PR é **infraestrutura mínima compartilhada + persistência operacional inicial**, sem inflar o recorte.
 
 ---
 
@@ -36,44 +34,36 @@
 4. [Escopo](#4-escopo)
 5. [Fora de Escopo](#5-fora-de-escopo)
 6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Estrutura do Módulo de Ingestion](#7-estrutura-do-módulo-de-ingestion)
-8. [Proposta de Infra Compartilhada](#8-proposta-de-infra-compartilhada)
-9. [Proposta de Tabela Inicial](#9-proposta-de-tabela-inicial)
-10. [Por que não existe tabela de login aqui?](#10-por-que-não-existe-tabela-de-login-aqui)
-11. [Contratos Mínimos](#11-contratos-mínimos)
-12. [Regras de Implementação](#12-regras-de-implementação)
-13. [Critérios de Review](#13-critérios-de-review)
-14. [Critérios de Aceite](#14-critérios-de-aceite)
-15. [Conclusão](#15-conclusão)
+7. [Estrutura Envolvida](#7-estrutura-envolvida)
+8. [Foundation Compartilhada Proposta](#8-foundation-compartilhada-proposta)
+9. [Persistência Inicial de Ingestion](#9-persistência-inicial-de-ingestion)
+10. [Contratos Mínimos](#10-contratos-mínimos)
+11. [Regras de Implementação](#11-regras-de-implementação)
+12. [Critérios de Review](#12-critérios-de-review)
+13. [Critérios de Aceite](#13-critérios-de-aceite)
+14. [Conclusão](#14-conclusão)
 
 ---
 
 ## 1. Síntese Executiva
 
-A progressão arquitetural da Fase 1 até aqui foi:
+A progressão da Fase 1 até aqui foi:
 
-- **PR 06** → autenticação delegada mínima
-- **PR 07** → propagação do usuário autenticado até o domínio de `ingestion`
-- **PR 08** → persistência mínima inicial da operação de `ingestion`
+- **PR 06** → foundation mínima de autenticação delegada
+- **PR 07** → propagação do usuário autenticado até `ingestion`
+- **PR 08** → persistência inicial mínima da operação
 
-A lacuna que permanece depois dessas três PRs é objetiva:
+A **PR 09** continua esse fluxo sem reprojetar a aplicação.
 
-> a aplicação já autentica na borda, já propaga a identidade e já abre a operação inicial, mas ainda não possui foundation mínima de infraestrutura compartilhada suficientemente clara para sustentar o próximo passo operacional da fase.
+O objetivo agora é consolidar o primeiro recorte de infraestrutura compartilhada necessário para sustentar estado operacional real com clareza estrutural e baixo acoplamento:
 
-A **PR 09** fecha exatamente esse gap, sem inflar a arquitetura:
+- foundation mínima de **Redis**
+- foundation mínima de **database access**
+- persistência real da operação inicial de `ingestion` sobre um ponto compartilhado mais explícito
 
-- introduz a foundation mínima de **Redis**
-- consolida a foundation mínima de **database access**
-- preserva a persistência inicial real da operação de `ingestion` sobre uma base compartilhada mais explícita
+Esta PR **não resolve o pipeline completo**.
 
-O foco desta PR **não é** resolver o pipeline completo.
-
-O foco é garantir que a aplicação passe a ter:
-
-- conectividade de infraestrutura compartilhada
-- base mínima reutilizável para estado operacional
-- persistência inicial real aderente ao recorte
-- preparação estrutural imediata para os próximos slices, sem antecipar comportamento futuro
+Ela resolve o próximo passo correto: fazer a aplicação ter infraestrutura compartilhada mínima, explícita e reutilizável para o estado operacional inicial da fase.
 
 ---
 
@@ -81,21 +71,23 @@ O foco é garantir que a aplicação passe a ter:
 
 Introduzir a foundation mínima de infraestrutura compartilhada necessária para sustentar o primeiro estado operacional real da aplicação.
 
-### Em termos práticos, esta PR deve permitir
+### Em termos práticos
+
+Esta PR deve permitir:
 
 - centralizar o acesso ao **Redis**
 - consolidar o acesso ao **banco operacional**
 - manter a persistência real da operação inicial de `ingestion`
-- preservar o vínculo com o usuário autenticado que iniciou a operação
+- preservar `initiatedByUserId` como metadado operacional explícito
 
 ### Resultado esperado
 
 Ao final desta PR, a aplicação deve ser capaz de:
 
-- subir com a infra mínima de Redis estruturada
-- acessar o banco operacional por meio de foundation compartilhada
+- subir com a foundation mínima de Redis estruturada
+- acessar o banco operacional por meio de um ponto compartilhado claro
 - persistir a operação inicial de `ingestion` com estado mínimo consistente
-- manter `initiatedByUserId` como metadado operacional explícito
+- manter rastreabilidade operacional básica da abertura da operação
 
 ---
 
@@ -107,20 +99,10 @@ A decisão central desta PR é:
 
 Isso significa:
 
-- primeiro estruturar a base mínima de conectividade compartilhada
+- estruturar primeiro a base mínima de conectividade compartilhada
 - consolidar o acesso às dependências operacionais reais
-- manter a persistência inicial simples e explícita
-- sem antecipar fila, jobs, steps, coordenação distribuída ou pipeline completo
-
-### A arquitetura-base permanece a mesma
-
-Esta PR mantém integralmente o desenho arquitetural já consolidado:
-
-- auth delegado continua na API principal
-- a aplicação de IA continua **sem login próprio**
-- `shared/infra` continua restrito a componentes realmente transversais
-- `ingestion` continua como primeiro boundary funcional do pipeline
-- o recorte permanece pequeno, funcional e revisável
+- manter a persistência inicial simples, explícita e rastreável
+- não antecipar fila, jobs, steps, coordenação distribuída ou pipeline completo
 
 ### Princípios aplicados
 
@@ -138,19 +120,19 @@ Esta PR inclui:
 
 - foundation mínima de **Redis**
 - foundation mínima de **database access**
-- consolidação da tabela operacional mínima de `ingestion`
-- manutenção da persistência real do estado inicial da operação
+- consolidação da persistência operacional mínima de `ingestion`
 - manutenção explícita de `initiatedByUserId`
+- alinhamento da abertura da operação ao ponto compartilhado de infraestrutura
 
 ### Em termos de implementação
 
 Espera-se que esta PR cubra:
 
-- config centralizada de Redis no `environment.ts`
+- configuração centralizada de Redis no `environment.ts`
 - módulo e service mínimo de Redis em `shared/infra`
 - consolidação do acesso ao banco em `shared/infra/database`
-- alinhamento da persistência inicial de `ingestion` ao novo ponto compartilhado de acesso
-- preservação do contrato mínimo já validado nas PRs anteriores
+- persistência inicial real da operação de `ingestion`
+- preservação do contrato mínimo já estabelecido nas PRs anteriores
 
 ---
 
@@ -158,11 +140,6 @@ Espera-se que esta PR cubra:
 
 Esta PR **não** inclui:
 
-- login local
-- tabela de login
-- emissão local de token
-- cache de auth
-- ACL completa do legado
 - BullMQ
 - filas
 - jobs
@@ -179,9 +156,10 @@ Esta PR **não** inclui:
 - state machine
 - observabilidade expandida
 - health checks avançados
+- expansão estrutural de comportamento ainda não usado
 
 > [!NOTE]
-> A regra continua a mesma das PRs anteriores:
+> A regra permanece a mesma:
 >
 > **não implementar a próxima fase dentro da fase atual.**
 
@@ -226,45 +204,27 @@ flowchart LR
 > [!IMPORTANT]
 > Neste recorte, o Redis entra como **foundation mínima de infraestrutura compartilhada**.
 >
-> Ele **não precisa participar ainda do comportamento funcional do fluxo de ingestion** além da disponibilização da base de conectividade para os próximos slices.
+> Ele **não precisa participar ainda do comportamento funcional de ingestion** além da disponibilização da base de conectividade para os próximos slices.
 
 ---
 
-## 7. Estrutura do Módulo de Ingestion
+## 7. Estrutura Envolvida
 
-A árvore atual de `ingestion` permanece esta:
-
-```text
-src/
-└── modules/
-    └── ingestion/
-        ├── ingestion.module.ts
-        ├── infra/
-        │   ├── controllers/
-        │   │   └── ingestion.controller.ts
-        │   └── services/
-        │       └── ingestion.service.ts
-        └── model/
-            └── v1/
-                └── ingestion.contracts.ts
-```
-
-### Regra importante
-
-Esta PR **não reprojeta** o módulo de `ingestion`.
-
-Ela apenas evolui o próximo passo funcional mínimo a partir dessa estrutura já consolidada.
-
----
-
-## 8. Proposta de Infra Compartilhada
-
-A infraestrutura compartilhada proposta para este recorte deve continuar simples e explícita.
-
-### Estrutura sugerida
+A evolução desta PR preserva a estrutura já consolidada de `ingestion` e adiciona apenas a foundation compartilhada necessária em `shared/infra`.
 
 ```text
 src/
+├── modules/
+│   └── ingestion/
+│       ├── ingestion.module.ts
+│       ├── infra/
+│       │   ├── controllers/
+│       │   │   └── ingestion.controller.ts
+│       │   └── services/
+│       │       └── ingestion.service.ts
+│       └── model/
+│           └── v1/
+│               └── ingestion.contracts.ts
 └── shared/
     ├── config/
     │   └── environment.ts
@@ -277,9 +237,19 @@ src/
             └── redis.service.ts
 ```
 
-### Papel de cada parte
+### Regra importante
 
-#### `shared/config/environment.ts`
+Esta PR **não reprojeta** o módulo de `ingestion`.
+
+Ela apenas evolui o próximo passo funcional mínimo a partir da estrutura já existente.
+
+---
+
+## 8. Foundation Compartilhada Proposta
+
+A infraestrutura compartilhada deste recorte deve continuar pequena, explícita e aderente ao padrão do projeto.
+
+### `shared/config/environment.ts`
 
 Responsável por centralizar as variáveis de ambiente necessárias para:
 
@@ -287,15 +257,15 @@ Responsável por centralizar as variáveis de ambiente necessárias para:
 - banco operacional
 - acessos mínimos previstos para a Fase 1
 
-#### `shared/infra/database`
+### `shared/infra/database`
 
 Responsável por:
 
 - concentrar a conexão com o banco operacional
 - expor o client aderente ao padrão do projeto
-- servir como ponto único de acesso para persistência operacional mínima
+- servir como ponto único de acesso para a persistência operacional mínima
 
-#### `shared/infra/redis`
+### `shared/infra/redis`
 
 Responsável por:
 
@@ -303,28 +273,31 @@ Responsável por:
 - expor module/service mínimo
 - evitar múltiplos pontos soltos de conexão ao longo da aplicação
 
+> [!TIP]
+> O objetivo aqui não é criar uma camada genérica de infraestrutura, e sim um ponto compartilhado simples e claro para dependências operacionais reais.
+
 ---
 
-## 9. Proposta de Tabela Inicial
+## 9. Persistência Inicial de Ingestion
+
+A persistência desta PR representa a abertura mínima de uma operação real de `ingestion`.
 
 ### Tabela proposta
 
 ## `ingestions`
 
-Esta tabela representa a abertura mínima de uma operação de `ingestion`.
-
-### Campos propostos
+### Campos mínimos
 
 | Campo | Tipo | Objetivo |
 |---|---|---|
 | `id` | UUID / string | Identificador da operação |
 | `status` | string | Estado inicial da operação |
-| `initiated_by_user_id` | integer | Usuário autenticado que iniciou |
-| `payload` | JSON / JSONB | Payload bruto recebido na abertura |
+| `initiated_by_user_id` | integer | Usuário que iniciou a operação |
+| `payload` | JSON / JSONB | Payload bruto recebido |
 | `created_at` | timestamp | Momento de criação |
 | `updated_at` | timestamp | Momento da última atualização |
 
-### Intenção da tabela
+### Intenção da modelagem
 
 A tabela existe para resolver **somente** o primeiro estado operacional real do fluxo.
 
@@ -334,7 +307,7 @@ Ela não tenta modelar ainda:
 - jobs
 - steps
 - retry
-- publication
+- publicação
 - histórico rico de eventos
 
 ### Shape equivalente no domínio
@@ -351,61 +324,15 @@ export type IngestionRecord = {
 ```
 
 > [!IMPORTANT]
-> A proposta aqui é intencionalmente pequena:
+> A proposta é intencionalmente pequena:
 >
 > **uma tabela mínima primeiro, antes de qualquer modelagem mais ambiciosa do pipeline.**
 
 ---
 
-## 10. Por que não existe tabela de login aqui?
+## 10. Contratos Mínimos
 
-Não.
-
-### Não é interessante introduzir tabela de login nesta PR.
-
-E o motivo é arquitetural, não apenas de escopo.
-
-### O auth da aplicação já foi definido na PR 06
-
-A decisão já consolidada foi:
-
-- a **API principal** continua como autoridade de autenticação
-- a aplicação de IA **não cria login próprio**
-- a aplicação de IA **não emite token próprio**
-- a aplicação de IA **não persiste identidade local como sistema de auth**
-
-### O que esta aplicação precisa armazenar neste momento
-
-Ela só precisa armazenar:
-
-- o **identificador do usuário autenticado** que iniciou a operação
-- como metadado operacional do fluxo
-
-Ou seja:
-
-```ts
-initiatedByUserId
-```
-
-### O que isso significa na prática
-
-A PR 09 **não precisa** de:
-
-- tabela de usuários locais
-- tabela de login
-- sessão local
-- refresh token
-- credenciais
-
-Porque tudo isso reabriria uma decisão que já foi encerrada na PR 06.
-
----
-
-## 11. Contratos Mínimos
-
-### Contratos de domínio
-
-Os contratos de domínio continuam mínimos e alinhados ao que já foi introduzido nas PRs 07 e 08.
+Os contratos de domínio permanecem mínimos e alinhados ao recorte já validado.
 
 ```ts
 export type CreateIngestionInput = {
@@ -423,21 +350,19 @@ export type IngestionRecord = {
 };
 ```
 
-### Contratos de infraestrutura
-
-Só devem existir se forem realmente necessários para:
-
-- conexão
-- configuração
-- acesso interno
-
 ### Regra importante
 
-Esta PR não deve inventar contratos de negócio novos além do que o recorte já exige.
+Esta PR não deve inventar contratos de negócio novos além do que o recorte exige.
+
+Contratos de infraestrutura só devem existir quando forem realmente necessários para:
+
+- configuração
+- conexão
+- consumo interno
 
 ---
 
-## 12. Regras de Implementação
+## 11. Regras de Implementação
 
 ### Redis
 
@@ -476,7 +401,7 @@ A configuração deve:
 
 ---
 
-## 13. Critérios de Review
+## 12. Critérios de Review
 
 O review desta PR deve validar se:
 
@@ -484,14 +409,13 @@ O review desta PR deve validar se:
 - Redis foi introduzido sem overengineering
 - o acesso ao banco foi estruturado sem fundação paralela
 - a tabela `ingestions` está pequena e adequada ao recorte
-- não houve reabertura indevida da arquitetura de auth
-- não surgiu tabela de login local sem necessidade
 - o `IngestionService` continua simples
 - o recorte permaneceu pequeno, revisável e coerente
+- a foundation compartilhada realmente melhora clareza estrutural sem inflar a solução
 
 ---
 
-## 14. Critérios de Aceite
+## 13. Critérios de Aceite
 
 Esta PR pode ser considerada aceita se:
 
@@ -501,25 +425,24 @@ Esta PR pode ser considerada aceita se:
 - [ ] existir a tabela mínima `ingestions`
 - [ ] a operação inicial de `ingestion` puder ser persistida de forma real
 - [ ] `initiatedByUserId` for preservado corretamente
-- [ ] não houver login local nem tabela de login
-- [ ] não houver repository pattern ou abstração desnecessária
+- [ ] não houver abstração desnecessária de infraestrutura
 - [ ] o recorte permanecer pequeno, funcional e revisável
 
 ---
 
-## 15. Conclusão
+## 14. Conclusão
 
-A PR 09 não tenta resolver o pipeline completo nem reabrir decisões já consolidadas.
+A PR 09 não tenta resolver o pipeline completo.
 
-Ela apenas introduz o próximo passo correto depois das PRs 06, 07 e 08:
+Ela introduz o próximo passo correto da Fase 1:
 
-> **se a borda já autentica, a identidade já propaga, a operação inicial já pode ser persistida e a aplicação agora precisa consolidar sua foundation mínima de infraestrutura compartilhada para sustentar os próximos slices.**
+> **consolidar a foundation mínima de Redis, database access e persistência operacional inicial para sustentar os próximos slices com uma base compartilhada explícita e enxuta.**
 
 Em resumo:
 
-- **PR 06** autenticou a borda
-- **PR 07** propagou a identidade
-- **PR 08** estabeleceu a persistência inicial mínima
-- **PR 09** consolida Redis, database access e a base compartilhada da persistência operacional
+- **PR 06** consolidou a borda autenticada
+- **PR 07** propagou a identidade até o domínio
+- **PR 08** materializou a persistência inicial mínima
+- **PR 09** consolida a foundation compartilhada de Redis, database access e persistência operacional inicial
 
-Esta PR, portanto, abre o primeiro recorte claro de infraestrutura compartilhada da Fase 1 — ainda pequeno, explícito, incremental e sem overengineering.
+Esta PR abre, portanto, o primeiro recorte claro de infraestrutura compartilhada da Fase 1 — ainda pequeno, explícito, incremental e sem overengineering.
