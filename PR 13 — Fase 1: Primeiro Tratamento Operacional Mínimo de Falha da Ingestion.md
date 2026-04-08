@@ -1,5 +1,4 @@
 # 🔄 PR 13 — Fase 1: Primeiro Tratamento Operacional Mínimo de Falha da Ingestion
-
 ## Introdução do primeiro caminho terminal de erro controlado no fluxo mínimo da ingestion
 
 ---
