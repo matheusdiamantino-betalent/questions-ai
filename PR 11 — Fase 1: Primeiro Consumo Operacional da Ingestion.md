@@ -64,16 +64,15 @@ Esta PR resolve exatamente esse ponto: **consumir minimamente o item já despach
 
 ## 2. Objetivo do PR
 
-Introduzir o primeiro consumo operacional mínimo da operação de `ingestion`, reaproveitando a foundation já consolidada nas PRs anteriores.
+Introduzir o primeiro consumo operacional mínimo da operação de `ingestion`, reaproveitando exclusivamente a foundation já consolidada nas PRs anteriores.
 
 ### Em termos práticos
 
-Esta PR deve permitir:
+Esta PR deve permitir apenas:
 
 * ler um item já enfileirado no Redis
 * resolver o `ingestionId` correspondente
 * validar a existência da operação persistida
-* marcar a operação como **consumida operacionalmente pela primeira vez**
 * atualizar o estado da `ingestion` de `queued` para `processing`
 
 ### Resultado esperado
@@ -85,9 +84,9 @@ Ao final desta PR, a aplicação deve ser capaz de:
 * manter rastreabilidade básica do ciclo **abertura → dispatch → consumo mínimo**
 
 > [!NOTE]
-> O objetivo desta PR **não** é executar pipeline de negócio completo.
+> O objetivo desta PR **não** é executar pipeline de negócio, processamento rico ou qualquer etapa posterior da operação.
 >
-> O objetivo é apenas materializar o **primeiro consumo mínimo do item despachado**, com evolução explícita de estado.
+> O objetivo é apenas materializar o **primeiro consumo mínimo do item despachado**, com evolução explícita e pequena de estado.
 
 ---
 
@@ -95,7 +94,7 @@ Ao final desta PR, a aplicação deve ser capaz de:
 
 A decisão central desta PR é:
 
-> **despachar primeiro, consumir depois, sem orquestrar pipeline.**
+> **despachar primeiro, consumir depois, sem introduzir pipeline, worker genérico ou infraestrutura expandida de processamento.**
 
 A arquitetura-base já foi consolidada nas PRs anteriores e permanece a mesma.
 
@@ -110,11 +109,12 @@ Esta PR apenas adiciona o próximo comportamento funcional mínimo necessário s
 
 ### Boundary exato desta PR
 
-O consumo introduzido aqui deve ser entendido como:
+O consumo introduzido aqui deve ser entendido apenas como:
 
 * leitura do item da fila
 * resolução da operação correspondente
-* atualização mínima de estado da `ingestion`
+* validação de existência da `ingestion`
+* atualização mínima de estado para `processing`
 
 Nada além disso é objetivo desta entrega.
 
@@ -148,6 +148,11 @@ A unidade operacional mínima desta entrega deve continuar sendo simples:
 * unidade consumida: `ingestionId`
 * efeito persistido: atualização do status da operação
 
+> [!IMPORTANT]
+> O recorte desta PR termina na transição controlada de `queued` para `processing`.
+>
+> Qualquer execução adicional de regra de negócio, pipeline de processamento ou expansão de consumo fica fora desta entrega.
+
 ---
 
 ## 5. Fora de Escopo
@@ -170,6 +175,7 @@ Esta PR **não** inclui:
 * infraestrutura expandida de processamento
 * estrutura de pipeline completa
 * processamento de domínio rico após o consumo
+* handlers genéricos, processors reutilizáveis ou infraestrutura preparada para próximos consumers
 
 > [!NOTE]
 > A regra permanece a mesma:
@@ -297,7 +303,7 @@ O consumer desta PR deve fazer apenas:
 3. validar a existência da operação
 4. atualizar o status da operação para `processing`
 
-Se fizer além disso, o recorte provavelmente está expandindo indevidamente.
+Se fizer além disso, o recorte está expandindo indevidamente.
 
 ### Database
 
@@ -329,6 +335,7 @@ O review desta PR deve validar se:
 * a evolução de estado da operação permanece pequena e coerente
 * o recorte continua pequeno, revisável e sem pipeline prematuro
 * o consumo introduzido está limitado a **retirada controlada + resolução da operação + atualização de status**
+* não há worker genérico, processor reutilizável ou fundação paralela escondida nesta entrega
 
 ---
 
@@ -344,6 +351,7 @@ Esta PR pode ser considerada aceita se:
 * [ ] Redis for utilizado de forma mínima e sem abstração excessiva
 * [ ] o recorte permanecer pequeno, funcional e revisável
 * [ ] não houver antecipação indevida de pipeline completo
+* [ ] não houver expansão indevida para worker, processor ou infraestrutura assíncrona mais rica
 
 ---
 
@@ -360,7 +368,4 @@ Em resumo:
 * **PR 08** materializou a operação inicial
 * **PR 09** consolidou a foundation compartilhada
 * **PR 10** introduziu o primeiro dispatch operacional real
-* **PR 11** introduz o primeiro consumo operacional mínimo da `ingestion`
-
-Este PR mantém a linha do projeto: **slice pequeno, funcional, incremental e sem overengineering**.
-
+* **PR 11** introduz o primeiro consumo operacional
