@@ -1,6 +1,6 @@
 # 🔄 PR 11 — Fase 1: Primeiro Consumo Operacional da Ingestion
 
-## Transição mínima do dispatch enfileirado para o primeiro consumo operacional controlado
+## Transição mínima do dispatch enfileirado para a primeira retirada operacional controlada
 
 ---
 
@@ -56,9 +56,9 @@ A progressão da Fase 1 até aqui foi:
 
 A **PR 11** continua esse fluxo sem reprojetar a aplicação.
 
-O próximo passo correto agora é fazer a operação de `ingestion` deixar de existir apenas como um registro persistido e um item enfileirado, passando a ter seu **primeiro consumo operacional explícito**.
+O próximo passo correto agora é fazer a operação de `ingestion` deixar de existir apenas como um registro persistido e um item enfileirado, passando a ter sua **primeira retirada operacional controlada da fila**.
 
-Esta PR resolve exatamente esse ponto: **consumir minimamente o dispatch já existente e refletir esse avanço no estado da operação**.
+Esta PR resolve exatamente esse ponto: **consumir minimamente o item já despachado, resolver a operação correspondente e refletir esse avanço no estado da `ingestion`**.
 
 ---
 
@@ -70,18 +70,24 @@ Introduzir o primeiro consumo operacional mínimo da operação de `ingestion`, 
 
 Esta PR deve permitir:
 
-* consumir o item já despachado no Redis
-* resolver a operação de `ingestion` correspondente
-* realizar o **primeiro consumo operacional mínimo**
-* atualizar o estado da operação para refletir esse avanço
+* ler um item já enfileirado no Redis
+* resolver o `ingestionId` correspondente
+* validar a existência da operação persistida
+* marcar a operação como **consumida operacionalmente pela primeira vez**
+* atualizar o estado da `ingestion` de `queued` para `processing`
 
 ### Resultado esperado
 
 Ao final desta PR, a aplicação deve ser capaz de:
 
 * retirar a `ingestion` do estado apenas enfileirado
-* registrar seu primeiro consumo operacional
-* manter rastreabilidade básica do ciclo **abertura → dispatch → consumo**
+* refletir sua primeira retirada operacional controlada
+* manter rastreabilidade básica do ciclo **abertura → dispatch → consumo mínimo**
+
+> [!NOTE]
+> O objetivo desta PR **não** é executar pipeline de negócio completo.
+>
+> O objetivo é apenas materializar o **primeiro consumo mínimo do item despachado**, com evolução explícita de estado.
 
 ---
 
@@ -98,9 +104,19 @@ Esta PR apenas adiciona o próximo comportamento funcional mínimo necessário s
 ### Isso significa
 
 * reaproveitar a foundation mínima de persistência e Redis já introduzida
-* introduzir apenas o primeiro consumo necessário
+* introduzir apenas a **primeira retirada controlada do item da fila**
 * manter o fluxo explícito, pequeno e revisável
 * evitar antecipação de múltiplos workers, retries, coordenação rica ou pipeline completo
+
+### Boundary exato desta PR
+
+O consumo introduzido aqui deve ser entendido como:
+
+* leitura do item da fila
+* resolução da operação correspondente
+* atualização mínima de estado da `ingestion`
+
+Nada além disso é objetivo desta entrega.
 
 ---
 
@@ -111,7 +127,7 @@ Esta PR inclui:
 * primeiro consumo operacional mínimo da `ingestion`
 * evolução mínima do estado da operação após o enfileiramento
 * reaproveitamento da foundation de Redis já existente
-* preservação da rastreabilidade da operação aberta e despachada
+* preservação da rastreabilidade da operação aberta, despachada e consumida minimamente
 * evolução do comportamento do módulo de ingestion sem abrir nova fundação
 
 ### Em termos de implementação
@@ -120,8 +136,17 @@ Espera-se que esta PR cubra:
 
 * leitura do item enfileirado
 * resolução do `ingestionId`
-* atualização objetiva de status após o consumo
+* validação da existência da operação persistida
+* atualização objetiva de status de `queued` para `processing`
 * manutenção do contrato pequeno e aderente ao recorte
+
+### Unidade mínima consumida nesta PR
+
+A unidade operacional mínima desta entrega deve continuar sendo simples:
+
+* origem: Redis
+* unidade consumida: `ingestionId`
+* efeito persistido: atualização do status da operação
 
 ---
 
@@ -144,6 +169,7 @@ Esta PR **não** inclui:
 * abstração genérica de worker
 * infraestrutura expandida de processamento
 * estrutura de pipeline completa
+* processamento de domínio rico após o consumo
 
 > [!NOTE]
 > A regra permanece a mesma:
@@ -178,8 +204,8 @@ flowchart LR
     E --> F[Persist Initial Ingestion State]:::database
     F --> G[Dispatch Initial Ingestion Step]:::redis
     G --> H[Update Ingestion Status to Queued]:::database
-    H --> I[Consume Initial Ingestion Step]:::consumer
-    I --> J[Update Ingestion Status After Consumption]:::database
+    H --> I[Consume Queued Ingestion Id]:::consumer
+    I --> J[Update Ingestion Status to Processing]:::database
 
     classDef http fill:#111827,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
     classDef auth fill:#111827,stroke:#a78bfa,color:#f5f3ff,stroke-width:2px;
@@ -191,7 +217,7 @@ flowchart LR
 ```
 
 > [!IMPORTANT]
-> Neste recorte, o consumo entra apenas como **primeiro avanço operacional mínimo após o dispatch**, e não como modelagem de pipeline completo.
+> Neste recorte, o consumo entra apenas como **primeira retirada operacional controlada após o dispatch**, e não como modelagem de pipeline completo.
 
 ---
 
@@ -217,6 +243,12 @@ export type IngestionRecord = {
   createdAt: Date;
   updatedAt: Date;
 };
+```
+
+### Evolução de estado esperada nesta PR
+
+```ts
+created -> queued -> processing
 ```
 
 ### Regra importante
@@ -250,9 +282,22 @@ O consumer deve ser:
 
 * mínimo
 * explícito
+* específico para este caso de uso
 * aderente à foundation já introduzida
 * sem abstração genérica de worker
 * sem mini-framework de processamento
+* sem preparação estrutural para múltiplos consumers futuros
+
+### Efeito mínimo esperado do consumer
+
+O consumer desta PR deve fazer apenas:
+
+1. ler o próximo item da fila
+2. resolver o `ingestionId`
+3. validar a existência da operação
+4. atualizar o status da operação para `processing`
+
+Se fizer além disso, o recorte provavelmente está expandindo indevidamente.
 
 ### Database
 
@@ -283,6 +328,7 @@ O review desta PR deve validar se:
 * o fluxo continua simples
 * a evolução de estado da operação permanece pequena e coerente
 * o recorte continua pequeno, revisável e sem pipeline prematuro
+* o consumo introduzido está limitado a **retirada controlada + resolução da operação + atualização de status**
 
 ---
 
@@ -293,7 +339,8 @@ Esta PR pode ser considerada aceita se:
 * [ ] a operação de `ingestion` continuar sendo aberta corretamente
 * [ ] o dispatch mínimo continuar funcionando
 * [ ] existir o primeiro consumo operacional mínimo da operação
-* [ ] a operação puder refletir o primeiro avanço após o enfileiramento
+* [ ] o item puder ser retirado da fila Redis de forma controlada
+* [ ] a operação puder refletir a transição de `queued` para `processing`
 * [ ] Redis for utilizado de forma mínima e sem abstração excessiva
 * [ ] o recorte permanecer pequeno, funcional e revisável
 * [ ] não houver antecipação indevida de pipeline completo
@@ -304,7 +351,7 @@ Esta PR pode ser considerada aceita se:
 
 A PR 11 introduz o próximo passo correto da Fase 1:
 
-> **fazer a operação de `ingestion` sair do estado apenas enfileirado e passar a ter o primeiro consumo operacional mínimo, explícito e rastreável.**
+> **fazer a operação de `ingestion` sair do estado apenas enfileirado e passar a ter sua primeira retirada operacional controlada, explícita e rastreável.**
 
 Em resumo:
 
@@ -313,6 +360,7 @@ Em resumo:
 * **PR 08** materializou a operação inicial
 * **PR 09** consolidou a foundation compartilhada
 * **PR 10** introduziu o primeiro dispatch operacional real
-* **PR 11** introduz o primeiro consumo operacional da `ingestion`
+* **PR 11** introduz o primeiro consumo operacional mínimo da `ingestion`
 
 Este PR mantém a linha do projeto: **slice pequeno, funcional, incremental e sem overengineering**.
+
