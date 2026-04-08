@@ -409,5 +409,3 @@ Em resumo:
 - **PR 12** introduziu o primeiro fechamento operacional de sucesso
 - **PR 13** introduziu o primeiro tratamento operacional mínimo de falha
 - **PR 14** introduz o primeiro registro operacional mínimo do motivo de falha
-
-As próximas evoluções devem ser tratadas em PR própria, apenas se houver necessidade real e **sem expandir indevidamente o recorte desta fase**.
