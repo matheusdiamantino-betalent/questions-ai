@@ -16,7 +16,7 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR introduz apenas a **primeira correlação operacional mínima entre logs e traces** sobre a integração inicial estabelecida na PR 16.
+> Esta PR introduz apenas a **primeira correlação operacional mínima entre logs e traces** sobre a integração mínima da aplicação estabelecida na PR 16.
 >
 > Esta entrega inclui:
 >
@@ -25,9 +25,7 @@
 > - uso do fluxo de `ingestion` como **primeiro caso correlacionado ponta a ponta**
 > - melhoria objetiva da leitura local da execução sem alterar o domínio
 >
-> **Esta PR não expande regras de negócio, não altera o domínio funcional e não transforma observabilidade em framework interno da aplicação.**
->
-> O objetivo aqui não é ampliar a instrumentação da PR 16, e sim **tornar os sinais já emitidos mais legíveis, correlacionáveis e úteis para debugging local**.
+> **Este PR não expande regras de negócio, não altera o domínio funcional, não reabre a foundation da PR 15, não reabre a integração mínima da PR 16 e não transforma observabilidade em framework interno da aplicação.**
 
 ---
 
@@ -54,7 +52,7 @@
 
 ## 1. Síntese Executiva
 
-A PR 15 consolidou a **foundation local de observabilidade** do projeto.
+A PR 15 consolidou a **foundation local de observabilidade** do projeto, com a stack mínima de inspeção local para logs e traces.
 
 A PR 16 introduziu a **primeira integração mínima da aplicação** com essa foundation, permitindo que um fluxo real passasse a emitir:
 
@@ -62,9 +60,9 @@ A PR 16 introduziu a **primeira integração mínima da aplicação** com essa f
 - **traces mínimos**
 - **sinais operacionais úteis no fluxo de ingestion**
 
-Com isso resolvido, o próximo passo mínimo correto deixa de ser simplesmente “emitir sinais” e passa a ser **conseguir ler esses sinais de forma correlacionada**.
+Com isso resolvido, o próximo passo mínimo correto deixa de ser apenas emitir sinais e passa a ser **conseguir ler esses sinais de forma correlacionada**.
 
-> **A PR 17 existe para tornar logs e traces do fluxo validado minimamente conectados entre si.**
+> **A PR 17 existe para tornar logs e traces do fluxo já validado minimamente conectados entre si.**
 
 Nesta entrega, o foco continua pequeno e controlado:
 
@@ -73,11 +71,9 @@ Nesta entrega, o foco continua pequeno e controlado:
 - **leitura ponta a ponta do fluxo validado**
 - **uso do fluxo de ingestion como primeiro caso correlacionado**
 
-A ideia continua a mesma: entregar um slice pequeno, funcional, revisável e sem overengineering.
+Esta PR não introduz uma nova iniciativa, não amplia cobertura transversal do sistema e não cria uma camada genérica de telemetry.
 
-Esta PR não busca instrumentar novos módulos, não busca observabilidade total da aplicação e não cria uma camada genérica de telemetry.
-
-O fluxo da `ingestion` continua sendo o caso correto porque já possui pontos operacionais suficientes para validar correlação real entre execução, logs e spans.
+Ela apenas adiciona o próximo passo mínimo correto sobre a base já aprovada: **tornar mais legível a mesma execução que a PR 16 já passou a emitir**.
 
 ---
 
@@ -146,7 +142,7 @@ Não há, neste recorte:
 - dashboards ricos
 - alertas
 - métricas avançadas
-- camadas artificiais só para “padronizar tudo”
+- camadas artificiais só para padronizar tudo
 
 ---
 
@@ -157,7 +153,7 @@ Esta PR inclui:
 - primeira correlação mínima entre logs estruturados e traces
 - propagação pequena e explícita de identificadores operacionais no fluxo de `ingestion`
 - enriquecimento mínimo dos logs existentes com contexto de correlação
-- alinhamento mínimo entre nomes de spans e leitura operacional do fluxo
+- alinhamento mínimo entre spans e leitura operacional do fluxo
 - documentação objetiva do primeiro caso correlacionado
 - preservação integral do comportamento funcional atual da aplicação
 
@@ -230,7 +226,7 @@ Esta PR **não** inclui:
 }}%%
 flowchart LR
     A[Ingestion Flow]:::app --> B[Minimal Spans]:::trace
-    B --> C[Trace Context]:::trace
+    B --> C[Active Trace Context]:::trace
     C --> D[Structured Logs with Correlation Fields]:::logs
     D --> E[Local Log Files]:::logs
     E --> F[Promtail]:::collector
@@ -381,7 +377,7 @@ Os logs e spans devem permitir leitura mínima da execução com base em element
 
 ### Regra importante
 
-O foco desta PR não é “enriquecer tudo”.
+O foco desta PR não é enriquecer tudo.
 
 O foco é:
 
@@ -653,3 +649,4 @@ Em resumo:
 - o ambiente continua pequeno, explícito e revisável
 
 Esta entrega transforma a integração mínima da PR 16 em leitura operacional minimamente conectada, sem inflar arquitetura, sem abstrações cosméticas e sem esconder expansão indevida de escopo.
+
