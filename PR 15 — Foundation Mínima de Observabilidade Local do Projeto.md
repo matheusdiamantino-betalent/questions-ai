@@ -1,5 +1,5 @@
-# 🔄 PR 15 — Fase 1: Foundation Mínima de Observabilidade Local da Ingestion
-## Introdução de logging local com Docker, Loki, Promtail e Grafana para suporte operacional mínimo
+# 🔄 PR 15 — Foundation Mínima de Observabilidade Local do Projeto
+## Introdução de logging e stack local via Docker com Loki, Promtail e Grafana
 
 ---
 
@@ -7,8 +7,8 @@
 
 ![PR](https://img.shields.io/badge/PR-15-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-minimal%20local%20observability%20foundation-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-docker%20%2B%20loki%20%2B%20grafana-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-observability%20local-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Infra](https://img.shields.io/badge/infra-docker%20%2B%20loki%20%2B%20grafana-0f766e?style=for-the-badge&logo=docker&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,15 +16,16 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR é **complementar à Fase 1 da ingestion** e introduz apenas a foundation mínima necessária de **logging e observabilidade local** para apoiar o fluxo já consolidado nas PRs anteriores.
+> Esta PR introduz apenas a **foundation mínima de observabilidade local do projeto**, com foco em **logging operacional e inspeção local via Docker**.
 >
-> - manter o fluxo funcional já existente da `ingestion`
-> - manter o ciclo operacional até `completed` / `failed`
+> - manter o comportamento funcional atual da aplicação
 > - introduzir visibilidade mínima de execução local
-> - permitir inspeção básica de logs via Docker
-> - disponibilizar uma stack local pequena com **Loki + Promtail + Grafana**
+> - disponibilizar uma stack local simples com **Loki + Promtail + Grafana**
+> - permitir debugging e inspeção operacional durante desenvolvimento
 >
-> **Esta PR não altera o domínio da ingestion, não introduz novas regras de negócio e não transforma observabilidade em dependência do processamento.**
+> **Esta PR não expande domínio, não altera regras de negócio e não introduz plataforma completa de observabilidade.**
+>
+> O fluxo de `ingestion` é utilizado apenas como **primeiro caso operacional de validação**, e não como escopo exclusivo desta entrega.
 
 ---
 
@@ -41,15 +42,16 @@
 9. [Infraestrutura Local via Docker](#9-infraestrutura-local-via-docker)
 10. [Configuração Esperada](#10-configuração-esperada)
 11. [Uso Operacional Local](#11-uso-operacional-local)
-12. [Critérios de Review](#12-critérios-de-review)
-13. [Critérios de Aceite](#13-critérios-de-aceite)
-14. [Conclusão](#14-conclusão)
+12. [Validação Inicial com Ingestion](#12-validação-inicial-com-ingestion)
+13. [Critérios de Review](#13-critérios-de-review)
+14. [Critérios de Aceite](#14-critérios-de-aceite)
+15. [Conclusão](#15-conclusão)
 
 ---
 
 ## 1. Síntese Executiva
 
-Até a PR 14, a Fase 1 da ingestion consolidou um fluxo funcional mínimo:
+Até aqui, o projeto já consolidou um primeiro fluxo funcional operacional mínimo em torno da `ingestion`, incluindo:
 
 - abertura persistida da operação
 - enqueue mínimo
@@ -59,27 +61,32 @@ Até a PR 14, a Fase 1 da ingestion consolidou um fluxo funcional mínimo:
 - encerramento terminal em `failed`
 - persistência mínima de `failureReason`
 
-Com isso, o domínio já possui o primeiro ciclo operacional básico completo.
+Esse fluxo já é suficiente para justificar o próximo passo de suporte operacional:
 
-O próximo passo correto aqui não é expandir retry, resiliência ou pipeline.  
-O próximo passo correto é adicionar **visibilidade operacional mínima** sobre o que já existe, para facilitar execução local, debugging e inspeção do comportamento da aplicação durante desenvolvimento.
+> **dar visibilidade local ao comportamento da aplicação durante desenvolvimento.**
 
-Esta PR introduz exatamente isso:
+Esta PR não continua o domínio da ingestion como próxima etapa funcional.  
+Ela introduz uma **foundation transversal do projeto**, voltada para:
 
-- foundation mínima de logging local
-- foundation mínima de observabilidade local
-- stack simples via Docker
-- visualização básica de logs com **Grafana**
-- armazenamento e consulta local com **Loki**
-- coleta local simples com **Promtail**
+- logging local
+- observabilidade mínima
+- setup simples de ambiente
+- debugging mais claro
 
-Sem reabrir o domínio da ingestion e sem inflar o recorte com plataforma completa de observabilidade.
+Para isso, a entrega propõe uma stack local pequena e explícita baseada em:
+
+- **Docker**
+- **Loki**
+- **Promtail**
+- **Grafana**
+
+O fluxo da `ingestion` aparece aqui apenas como **primeiro caso prático de validação operacional**, por já existir e ser um caminho útil para inspeção local.
 
 ---
 
 ## 2. Objetivo do PR
 
-Introduzir uma foundation mínima de observabilidade local para apoiar o fluxo já existente da `ingestion`, mantendo o recorte pequeno e operacional.
+Introduzir uma foundation mínima de observabilidade local do projeto, permitindo inspeção básica de execução durante desenvolvimento sem alterar o comportamento funcional da aplicação.
 
 ### Em termos práticos
 
@@ -89,21 +96,23 @@ Esta PR deve permitir apenas:
 - visualizar logs da aplicação localmente
 - centralizar logs locais em Loki
 - consultar logs no Grafana
+- usar Promtail como coleta local mínima
 - manter a aplicação funcionalmente igual do ponto de vista de domínio
 
 ### Resultado esperado
 
-Ao final desta PR, a aplicação deve ser capaz de:
+Ao final desta PR, o projeto deve ser capaz de:
 
-- continuar processando `ingestion` como já faz hoje
-- emitir logs mínimos úteis para acompanhamento local
-- disponibilizar esses logs em um ambiente local simples
-- permitir inspeção manual do fluxo em desenvolvimento sem alterar a lógica do processamento
+- continuar executando normalmente
+- emitir logs mínimos úteis
+- disponibilizar esses logs localmente
+- permitir inspeção operacional simples em desenvolvimento
+- usar o fluxo da `ingestion` como validação inicial do setup
 
 > [!NOTE]
 > O objetivo desta PR **não** é introduzir observabilidade completa.
 >
-> O objetivo é apenas materializar uma **base local mínima e utilizável** para logging e consulta operacional do fluxo já existente.
+> O objetivo é apenas materializar uma **base local mínima e utilizável** de logging e visualização operacional.
 
 ---
 
@@ -111,17 +120,17 @@ Ao final desta PR, a aplicação deve ser capaz de:
 
 A decisão central desta PR é:
 
-> **introduzir apenas observabilidade local mínima, desacoplada do domínio da ingestion e suportada por uma stack simples via Docker com Loki, Promtail e Grafana.**
+> **introduzir apenas uma foundation local e transversal de observabilidade, desacoplada do domínio e suportada por uma stack simples via Docker com Loki, Promtail e Grafana.**
 
-A arquitetura funcional da ingestion permanece a mesma.
+A arquitetura funcional da aplicação permanece a mesma.
 
-Esta PR adiciona apenas uma infraestrutura auxiliar e leve de apoio operacional.
+Esta PR adiciona apenas infraestrutura auxiliar de apoio ao desenvolvimento.
 
 ### Isso significa
 
-- manter a lógica da `ingestion` inalterada em sua essência
+- manter a lógica de domínio inalterada
 - adicionar logging mínimo e explícito
-- utilizar Docker para facilitar o setup local
+- utilizar Docker para facilitar setup local
 - usar Loki como storage/query engine de logs
 - usar Promtail como coleta local simples
 - usar Grafana como interface mínima de visualização
@@ -151,7 +160,7 @@ Esta PR inclui:
 - inclusão de **Grafana**
 - configuração local mínima para coleta de logs
 - documentação de subida, acesso e uso operacional básico
-- preservação integral do fluxo funcional já existente da ingestion
+- preservação integral do comportamento funcional atual da aplicação
 
 ### Em termos de implementação
 
@@ -163,13 +172,13 @@ Espera-se que esta PR cubra:
 - configuração mínima do Grafana
 - definição simples de origem dos logs da aplicação
 - documentação objetiva de como subir e validar o ambiente
-- logs mínimos e explícitos no fluxo da aplicação, quando aplicável
+- logs mínimos e explícitos em fluxos úteis do sistema, quando aplicável
 
 ### Unidade mínima concluída nesta PR
 
 A unidade operacional mínima desta entrega deve continuar sendo simples:
 
-- aplicação continua executando como antes
+- a aplicação continua executando como antes
 - logs passam a ser visíveis localmente
 - a stack pode ser iniciada via Docker
 - o operador local consegue inspecionar o comportamento sem depender de infraestrutura externa
@@ -204,6 +213,8 @@ Esta PR **não** inclui:
 - APM
 - indexação avançada
 - taxonomia rica de eventos operacionais
+- evolução de domínio da `ingestion`
+- mudanças de contrato por causa de observabilidade
 
 > [!NOTE]
 > A regra permanece a mesma:
@@ -231,15 +242,13 @@ Esta PR **não** inclui:
   }
 }}%%
 flowchart LR
-    A[HTTP Request]:::http --> B[Ingestion Flow]:::service
-    B --> C[Application Logs]:::logs
-    C --> D[Local Log Source]:::logs
-    D --> E[Promtail]:::collector
-    E --> F[Loki]:::storage
-    F --> G[Grafana]:::ui
+    A[Application Runtime]:::app --> B[Application Logs]:::logs
+    B --> C[Local Log Source]:::logs
+    C --> D[Promtail]:::collector
+    D --> E[Loki]:::storage
+    E --> F[Grafana]:::ui
 
-    classDef http fill:#111827,stroke:#38bdf8,color:#e0f2fe,stroke-width:2px;
-    classDef service fill:#111827,stroke:#22c55e,color:#ecfdf5,stroke-width:2px;
+    classDef app fill:#111827,stroke:#22c55e,color:#ecfdf5,stroke-width:2px;
     classDef logs fill:#451a03,stroke:#f59e0b,color:#fff7ed,stroke-width:2px;
     classDef collector fill:#172554,stroke:#60a5fa,color:#eff6ff,stroke-width:2px;
     classDef storage fill:#052e16,stroke:#22c55e,color:#f0fdf4,stroke-width:2px;
@@ -247,7 +256,7 @@ flowchart LR
 ```
 
 > [!IMPORTANT]
-> Neste recorte, **observabilidade não interfere no fluxo funcional da ingestion**.
+> Neste recorte, **observabilidade não interfere no comportamento funcional da aplicação**.
 >
 > A stack local apenas consome e expõe logs para inspeção operacional em desenvolvimento.
 
@@ -255,19 +264,19 @@ flowchart LR
 
 ## 7. Contratos Mínimos
 
-Os contratos de domínio devem continuar pequenos e aderentes ao recorte.
+Os contratos da aplicação devem continuar pequenos e aderentes ao recorte.
 
 ### Regra principal desta PR
 
-Esta entrega **não deve inflar contratos da ingestion**.
+Esta entrega **não deve inflar contratos de domínio**.
 
 Isso significa:
 
-- não alterar o payload da fila por causa de observabilidade
+- não alterar payloads de fila por causa de observabilidade
 - não alterar contratos de DTO por causa de Grafana/Loki
-- não introduzir metadata rica de tracing no contrato principal
+- não introduzir metadata rica de tracing nos contratos principais
 - não transformar logs em requisito de negócio
-- não acoplar a execução da ingestion à disponibilidade da stack local
+- não acoplar execução funcional à disponibilidade da stack local
 
 ### Evolução mínima aceitável
 
@@ -293,7 +302,7 @@ A aplicação deve:
 
 - continuar simples
 - continuar executando sem dependência lógica do Grafana/Loki
-- manter o fluxo funcional da ingestion inalterado
+- manter o comportamento funcional atual
 - emitir logs mínimos úteis
 - não absorver infraestrutura futura desnecessária
 
@@ -475,7 +484,7 @@ scrape_configs:
       - targets:
           - localhost
         labels:
-          job: ingestion-app
+          job: application
           env: local
           __path__: /var/log/app/*.log
 ```
@@ -512,7 +521,7 @@ Se houver configuração nova para habilitar ou controlar logging local, ela dev
 - seguir o padrão do projeto
 - usar Zod quando aplicável
 - ser opcional
-- não bloquear a execução funcional da ingestion
+- não bloquear a execução funcional da aplicação
 
 ### Variáveis aceitáveis
 
@@ -550,7 +559,7 @@ docker compose -f docker-compose.observability.yml up -d
 
 1. subir a stack local
 2. iniciar a aplicação
-3. executar o fluxo da ingestion
+3. executar qualquer fluxo útil da aplicação
 4. gerar logs locais
 5. validar coleta via Promtail
 6. consultar logs no Grafana usando o datasource Loki
@@ -560,7 +569,7 @@ docker compose -f docker-compose.observability.yml up -d
 Exemplo de busca simples:
 
 ```logql
-{job="ingestion-app", env="local"}
+{job="application", env="local"}
 ```
 
 ### Resultado esperado
@@ -569,31 +578,71 @@ O operador local deve conseguir:
 
 - ver logs chegando no Loki
 - consultar logs da aplicação no Grafana
-- acompanhar o fluxo da ingestion sem alterar o domínio
+- acompanhar comportamento da aplicação sem alterar o domínio
 - usar essa base para debugging local simples
 
 ---
 
-## 12. Critérios de Review
+## 12. Validação Inicial com Ingestion
+
+Embora esta PR seja **transversal ao projeto**, é razoável utilizar o fluxo já existente da `ingestion` como **primeiro caso de validação operacional**.
+
+### Por que usar ingestion como validação inicial
+
+Porque o fluxo já possui:
+
+- abertura
+- persistência
+- enqueue
+- consumo
+- transição de status
+- encerramento terminal
+- erro mínimo persistido
+
+Ou seja, é um caminho suficientemente útil para gerar sinais operacionais reais.
+
+### Regra importante
+
+A `ingestion` entra aqui apenas como:
+
+- **exemplo de fluxo útil**
+- **fonte inicial de logs**
+- **caso de validação do setup local**
+
+Ela **não define o escopo da PR 15**.
+
+### O que validar com ingestion
+
+É aceitável validar se:
+
+- o fluxo gera logs úteis localmente
+- o caminho feliz pode ser observado
+- o caminho de falha pode ser observado
+- a aplicação permanece funcionalmente íntegra
+
+---
+
+## 13. Critérios de Review
 
 O review desta PR deve validar se:
 
-- a PR 15 está corretamente posicionada como **foundation operacional complementar**
+- a PR 15 está corretamente posicionada como **foundation operacional transversal**
 - a stack local via Docker permanece pequena e revisável
 - Grafana, Loki e Promtail foram introduzidos sem excesso estrutural
-- a ingestão continua funcionalmente igual
+- a aplicação continua funcionalmente igual
 - os logs introduzidos são mínimos e úteis
 - não existe acoplamento indevido entre domínio e observabilidade
 - o setup local é objetivo e fácil de reproduzir
+- a `ingestion` aparece apenas como validação inicial e não como reabertura indevida de escopo
 - não há OpenTelemetry completo, tracing distribuído, métricas ricas, alertas ou plataforma expandida escondida nesta entrega
 
 ---
 
-## 13. Critérios de Aceite
+## 14. Critérios de Aceite
 
 Esta PR pode ser considerada aceita se:
 
-- [ ] o fluxo funcional atual da `ingestion` continuar operando sem alteração de domínio
+- [ ] o comportamento funcional atual da aplicação continuar operando sem alteração de domínio
 - [ ] existir uma stack local mínima via Docker
 - [ ] Loki subir corretamente
 - [ ] Promtail conseguir coletar logs da origem configurada
@@ -601,25 +650,26 @@ Esta PR pode ser considerada aceita se:
 - [ ] os logs da aplicação puderem ser visualizados localmente
 - [ ] o setup for simples de executar e revisar
 - [ ] a aplicação continuar funcionando mesmo sem depender logicamente da stack
+- [ ] a `ingestion` puder ser usada como validação inicial do setup
 - [ ] o recorte permanecer pequeno, funcional e revisável
 - [ ] não houver antecipação indevida de observabilidade expandida, tracing completo, alertas ou plataforma de produção
 
 ---
 
-## 14. Conclusão
+## 15. Conclusão
 
-A PR 15 introduz o próximo passo correto **de suporte operacional local** para a Fase 1:
+A PR 15 introduz o próximo passo correto **de suporte operacional local do projeto**:
 
-> **dar visibilidade mínima ao fluxo já funcional da ingestion por meio de uma stack local simples com Docker, Loki, Promtail e Grafana, preservando o recorte pequeno e sem expandir o domínio.**
+> **dar visibilidade mínima ao comportamento atual da aplicação por meio de uma stack local simples com Docker, Loki, Promtail e Grafana, preservando o recorte pequeno e sem expandir o domínio.**
 
 Em resumo:
 
-- as PRs anteriores consolidaram o fluxo funcional mínimo da ingestion
-- a PR 15 não expande esse domínio
-- a PR 15 introduz apenas apoio operacional local
+- esta PR não é continuação funcional direta da trilha da `ingestion`
+- esta PR introduz uma foundation transversal de observabilidade local
 - Loki centraliza os logs locais
 - Promtail coleta os logs
 - Grafana permite visualização simples
+- o fluxo da `ingestion` é usado apenas como validação inicial
 - o ambiente permanece pequeno, explícito e revisável
 
 Esta entrega existe para melhorar **execução local, inspeção e debugging**, sem inflar a arquitetura e sem abrir nova frente de complexidade indevida.
