@@ -393,22 +393,32 @@ A tree view desta PR deve crescer apenas o necessário para refletir a primeira 
 src/
   modules/
     ingestion/
-      ...
-      application/
-      infrastructure/
-        observability/
-          ...
+      infra/
+        controllers/
+          ingestion.controller.ts
+        dao/
+          ingestion.dao.ts
+        processors/
+          ingestion.processor.spec.ts
+          ingestion.processor.ts
+        services/
+      model/
+        v1/
+          ingestion.contracts.ts
+      ingestion.module.ts
+
   shared/
-    observability/
-      tracing.ts
-      correlation.ts
-      ...
+    config/
+      environment.ts
     infra/
+      database/
       logger/
-        logger.service.ts
-      ...
-  main.ts
+      observability/
+      redis/
+    model/
+
   app.module.ts
+  main.ts
 
 docker/
   observability/
@@ -416,20 +426,21 @@ docker/
       provisioning/
         datasources/
           datasource.yml
+    langfuse/
+      .env.example
     loki/
-      config.yml
-    promtail/
       config.yml
     otel-collector/
       config.yml
+    promtail/
+      config.yml
     tempo/
       config.yml
-    langfuse/
-      .env.example
+
+logs/
+  application.log
 
 docker-compose.observability.yml
-logs/
-.docker_data/
 ```
 
 > [!NOTE]
