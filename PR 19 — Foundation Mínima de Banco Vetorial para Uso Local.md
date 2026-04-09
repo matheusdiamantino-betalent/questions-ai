@@ -121,13 +121,35 @@ Esta PR não inclui:
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#0b1020",
+    "primaryColor": "#111827",
+    "primaryTextColor": "#e5f9ff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#a855f7",
+    "secondaryColor": "#0f172a",
+    "secondaryTextColor": "#f5d0fe",
+    "secondaryBorderColor": "#a855f7",
+    "tertiaryColor": "#020617",
+    "tertiaryTextColor": "#cffafe"
+  }
+}}%%
 flowchart LR
     A["Texto ou registro de entrada"] --> B["Embedding gerado"]
     B --> C["Persistência vetorial local"]
     C --> D["Consulta simples por similaridade"]
     D --> E["Retorno básico de correspondências"]
-```
 
+    classDef cyan fill:#0f172a,stroke:#22d3ee,stroke-width:2px,color:#e0f2fe;
+    classDef purple fill:#111827,stroke:#a855f7,stroke-width:2px,color:#f5d0fe;
+    classDef result fill:#020617,stroke:#67e8f9,stroke-width:2px,color:#ecfeff;
+
+    class A,C cyan;
+    class B,D purple;
+    class E result;
+```
 O fluxo desta PR permanece deliberadamente curto. Ele existe apenas para validar a capacidade mínima de armazenamento e consulta, sem inflar o módulo com etapas que pertencem a slices posteriores.
 
 ---
