@@ -44,13 +44,13 @@
 
 ## 1. Síntese Executiva
 
-A PR 21 encerrou o recorte vetorial mínimo do projeto, consolidando o fluxo operacional necessário para geração, persistência e consulta inicial de embeddings dentro da arquitetura já aprovada.
+A PR 21 encerrou o recorte vetorial mínimo do projeto, consolidando o fluxo operacional necessário para geração, persistência e leitura inicial de embeddings dentro da arquitetura já aprovada.
 
-Com o redirecionamento de produto, o próximo passo mínimo correto deixa de expandir o eixo vetorial e passa a abrir, de forma controlada, a base do novo eixo orientado a agents.
+Com o redirecionamento do produto, o próximo passo mínimo correto deixa de expandir o eixo vetorial e passa a abrir, de forma controlada, o novo eixo orientado a agents.
 
-Esta PR faz exatamente esse movimento, sem redesenhar a aplicação e sem antecipar comportamento futuro. O recorte se limita a introduzir LangChain com a menor integração necessária para permitir uma primeira chamada simples de modelo, preservando tudo o que já foi estabilizado anteriormente.
+Esta PR executa exatamente esse movimento sem redesenhar a aplicação e sem antecipar comportamento futuro. O recorte se limita a introduzir LangChain com a menor integração necessária para permitir uma primeira chamada simples de modelo, preservando tudo o que já foi estabilizado anteriormente.
 
-Em termos práticos, esta entrega não constrói agents. Ela apenas estabelece a fundação mínima para que o primeiro workflow real desse novo eixo possa ser introduzido na sequência, com continuidade explícita e baixo risco de expansão indevida.
+Em termos práticos, esta entrega não constrói agents. Ela apenas estabelece a fundação mínima para que o primeiro workflow real desse novo eixo possa ser introduzido na sequência, com continuidade explícita, baixo acoplamento e facilidade de review.
 
 ---
 
@@ -73,7 +73,7 @@ Isso significa que a base vetorial permanece isolada como capability já conclu�
 
 Não entram nesta PR:
 
-- abstrações genéricas de agent runtime
+- abstrações genéricas de runtime de agents
 - camada própria de orchestration
 - registry de tools
 - memória conversacional
@@ -114,6 +114,25 @@ Fica explicitamente fora deste PR:
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {
+  'background': '#020617',
+  'primaryColor': '#0f172a',
+  'primaryTextColor': '#e5e7eb',
+  'primaryBorderColor': '#22d3ee',
+  'lineColor': '#22d3ee',
+  'secondaryColor': '#111827',
+  'secondaryTextColor': '#e5e7eb',
+  'secondaryBorderColor': '#a855f7',
+  'tertiaryColor': '#0b1120',
+  'tertiaryTextColor': '#e5e7eb',
+  'tertiaryBorderColor': '#38bdf8',
+  'nodeBorder': '#22d3ee',
+  'mainBkg': '#0f172a',
+  'clusterBkg': '#111827',
+  'clusterBorder': '#a855f7',
+  'edgeLabelBackground': '#020617',
+  'fontFamily': 'monospace'
+}}}%%
 flowchart LR
     A["Input simples"] --> B["LangChain service mínimo"]
     B --> C["LLM configurado"]
