@@ -1,5 +1,5 @@
 # 🔄 PR 19 — Foundation Mínima de Banco Vetorial para Uso Local
-## Introdução do primeiro suporte operacional mínimo para persistência e consulta de embeddings no ambiente local
+## Introdução do primeiro suporte operacional mínimo para armazenamento e consulta básica de embeddings no ambiente local
 
 ---
 
@@ -16,56 +16,134 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR introduz a **foundation mínima de banco vetorial para uso local**, adicionando suporte real de persistência e consulta de embeddings utilizando PostgreSQL + pgvector.
+> Esta PR introduz a **foundation mínima de banco vetorial para uso local**, adicionando a primeira capacidade operacional real de persistir embeddings e executar consulta básica por similaridade utilizando PostgreSQL + pgvector.
+
+---
+
+## 📚 Sumário
+
+1. Síntese Executiva  
+2. Objetivo do PR  
+3. Decisão Arquitetural  
+4. Escopo  
+5. Fora de Escopo  
+6. Fluxo Arquitetural  
+7. Contratos Mínimos  
+8. Regras de Implementação  
+9. Critérios de Review  
+10. Critérios de Aceite  
+11. Conclusão  
 
 ---
 
 ## 1. Síntese Executiva
 
-Esta PR inicia o módulo vetorial com persistência real e busca por similaridade, sem inflar arquitetura.
+Após a estabilização dos fluxos de ingestion e observabilidade, esta PR introduz o próximo passo mínimo necessário: a base de armazenamento vetorial.
+
+A entrega foca exclusivamente em:
+
+- persistência de embeddings
+- consulta por similaridade
+- validação real via testes
+
+Sem expandir para retrieval completo ou agentes.
 
 ---
 
 ## 2. Objetivo do PR
 
-- persistir embeddings
-- consultar por similaridade
-- manter implementação mínima
+- habilitar armazenamento vetorial local
+- permitir inserção de embeddings
+- permitir busca por similaridade
+- manter o menor recorte funcional possível
 
 ---
 
 ## 3. Decisão Arquitetural
 
-- PostgreSQL + pgvector
-- SQL explícito
-- sem abstrações
+A implementação segue princípios claros:
+
+- uso direto de PostgreSQL com pgvector
+- SQL explícito para operações vetoriais
+- ausência de abstrações genéricas
+- DAO como camada de persistência
+- service mínimo como orquestração
 
 ---
 
 ## 4. Escopo
 
-- migration com extensão vector
-- tabela document_embeddings
-- DAO + Service mínimos
-- testes reais
+Inclui:
+
+- extensão `vector` via migration
+- tabela `document_embeddings`
+- DAO com operações de insert e search
+- service mínimo
+- testes de integração reais
 
 ---
 
 ## 5. Fora de Escopo
 
-- retrieval
-- agents
+- geração de embeddings
+- pipeline de retrieval
+- chunking
 - ranking
-- abstrações
+- abstrações de vector store
+- múltiplos backends
 
 ---
 
-## 6. Fluxo
+## 6. Fluxo Arquitetural
 
-Texto → Embedding → Banco → Similaridade → Resultado
+```mermaid
+flowchart LR
+    A["Texto"] --> B["Embedding"]
+    B --> C["Persistência (pgvector)"]
+    C --> D["Consulta por similaridade"]
+    D --> E["Resultado ordenado"]
+```
 
 ---
 
-## 7. Conclusão
+## 7. Contratos Mínimos
 
-Foundation mínima funcional pronta para evolução incremental.
+Tabela:
+
+- id (UUID)
+- content (TEXT)
+- embedding (VECTOR 1536)
+- created_at (TIMESTAMP)
+
+---
+
+## 8. Regras de Implementação
+
+- DAO isolado para persistência
+- SQL explícito para similaridade
+- sem abstração prematura
+- sem camadas desnecessárias
+
+---
+
+## 9. Critérios de Review
+
+- escopo pequeno
+- implementação clara
+- sem overengineering
+- funcionamento validado
+
+---
+
+## 10. Critérios de Aceite
+
+- persistência funcional
+- busca vetorial funcional
+- testes passando
+- sem abstrações desnecessárias
+
+---
+
+## 11. Conclusão
+
+Esta PR estabelece a base vetorial funcional com o menor esforço possível, permitindo evolução incremental controlada nas próximas fases.
