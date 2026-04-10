@@ -16,13 +16,13 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR adiciona apenas a primeira integração operacional mínima entre o fluxo já existente de ingestion e a base vetorial local introduzida anteriormente.
+> Esta PR adiciona apenas a primeira integração operacional mínima entre o fluxo já existente de ingestion e a persistência de embeddings já disponível no projeto.
 >
-> - mantém a base vetorial local já estabelecida na PR 19
-> - conecta a geração de embeddings a um fluxo real já existente da aplicação
-> - persiste o resultado vetorial sem expandir a arquitetura além do recorte atual
+> - mantém a fundação vetorial local já introduzida anteriormente
+> - conecta a geração de embedding ao fluxo real já existente de ingestion
+> - persiste o embedding gerado usando o caminho mínimo já implementado no módulo de embeddings
 >
-> **Este PR não introduz retrieval, chunking, ranking, pipeline vetorial completo, abstrações adicionais ou expansão de observabilidade.**
+> **Este PR não introduz retrieval, chunking, ranking, pipeline vetorial completo, múltiplos embeddings por ingestion, abstrações adicionais ou expansão de observabilidade.**
 
 ---
 
@@ -44,17 +44,18 @@
 
 ## 1. Síntese Executiva
 
-A PR 19 consolidou a fundação mínima de persistência vetorial local, mantendo o recorte restrito à estrutura necessária para armazenar embeddings sem ainda conectá-la a um fluxo real da aplicação.
+A PR 19 consolidou a fundação mínima para persistência vetorial local, deixando a base pronta para armazenar embeddings sem ainda conectá-la a um fluxo operacional real da aplicação.
 
-Esta PR 20 dá o próximo passo mínimo correto nessa linha evolutiva: usar a base já introduzida em um fluxo existente de ingestion, conectando geração de embeddings e persistência vetorial dentro do processamento já estabelecido.
+A PR 20 adiciona exatamente o próximo passo mínimo correto nessa evolução: usar o fluxo já existente de ingestion como ponto de integração para gerar um embedding a partir do conteúdo processado e persisti-lo na tabela vetorial já disponível.
 
-A decisão aqui não é abrir uma nova frente arquitetural, mas validar operacionalmente a primeira integração real entre:
+A mudança aqui não cria um novo subsistema nem reabre a arquitetura anterior. O que esta PR faz é validar operacionalmente o primeiro caminho ponta a ponta entre:
 
-- o fluxo já existente de ingestion
-- a geração mínima de embeddings
-- a persistência vetorial local já disponível
+- ingestion já persistida e enfileirada
+- processamento já existente
+- geração mínima de embedding
+- persistência vetorial associada ao item processado
 
-Com isso, a aplicação passa a ter um primeiro caminho funcional ponta a ponta entre conteúdo processado e registro vetorial persistido, sem introduzir retrieval, chunking, orquestração paralela ou qualquer expansão indevida da fase.
+Com isso, o sistema passa a ter a primeira integração real entre processamento e armazenamento vetorial, mantendo o recorte pequeno, explícito e revisável.
 
 ---
 
@@ -62,25 +63,28 @@ Com isso, a aplicação passa a ter um primeiro caminho funcional ponta a ponta 
 
 Este PR tem como objetivo prático:
 
-- integrar a geração de embeddings ao fluxo atual de ingestion
-- persistir o vetor gerado na base vetorial local já introduzida
-- validar um primeiro caminho operacional ponta a ponta entre processamento e armazenamento vetorial
-- manter o fluxo visível, simples e aderente ao padrão já aprovado do projeto
+- integrar a geração de embeddings ao fluxo atual de processing da ingestion
+- extrair o conteúdo textual do payload já persistido
+- gerar um embedding mínimo a partir desse conteúdo
+- persistir o embedding em `document_embeddings`
+- concluir a ingestion somente após a persistência vetorial com sucesso
+- manter o fluxo terminal de falha já existente quando ocorrer erro durante o processamento
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão arquitetural desta PR é manter integralmente a base já aprovada e adicionar apenas o próximo passo funcional mínimo sobre ela.
+A decisão arquitetural desta PR é manter integralmente o desenho incremental já aprovado e adicionar apenas o próximo passo funcional mínimo sobre ele.
 
 Em termos práticos, isso significa:
 
-- manter a fundação vetorial local introduzida na PR 19
-- reutilizar o fluxo já existente de ingestion como ponto de integração
-- executar a geração de embeddings dentro do fluxo já controlado da aplicação
-- persistir o resultado vetorial de forma direta, sem criar camadas cosméticas ou infraestrutura paralela
+- manter a base vetorial local já introduzida anteriormente
+- reutilizar o `IngestionProcessor` como ponto real de integração
+- gerar o embedding dentro do fluxo de processamento já existente
+- persistir o vetor por meio do módulo de embeddings já presente na aplicação
+- associar o registro vetorial ao item processado usando o próprio `ingestion.id` como identificador persistido
 
-Esta PR não redefine arquitetura, não reprojeta o pipeline de ingestion e não cria um subsistema vetorial separado. Ela apenas conecta duas partes já previstas no desenho incremental da fase: processamento existente e persistência vetorial mínima.
+A implementação não cria um módulo vetorial paralelo, não introduz orchestrator adicional e não desloca a regra principal para fora do fluxo já existente. A integração acontece diretamente no processor, com geração mínima e persistência mínima, no menor recorte possível.
 
 ---
 
@@ -88,11 +92,15 @@ Esta PR não redefine arquitetura, não reprojeta o pipeline de ingestion e não
 
 Entra neste PR:
 
-- integração mínima entre ingestion e geração de embeddings
-- persistência do embedding gerado na base vetorial local
-- associação operacional entre o item processado e o registro vetorial persistido
-- validação do fluxo ponta a ponta dentro do caminho já existente de processamento
-- manutenção do comportamento geral da aplicação fora do recorte vetorial introduzido aqui
+- ajuste do `IngestionProcessor` para integrar geração e persistência de embedding
+- extração do campo `content` a partir do payload da ingestion
+- validação mínima de payload textual antes da geração
+- geração mínima de embedding via `EmbeddingGeneratorService`
+- persistência do embedding via `DocumentEmbeddingsService` e `DocumentEmbeddingsDao`
+- uso de `ingestion.id` como `id` do registro vetorial persistido
+- ajuste de wiring entre `IngestionModule` e `EmbeddingsModule`
+- atualização dos testes do processor para refletir o novo fluxo
+- manutenção da persistência vetorial em `document_embeddings`
 
 ---
 
@@ -101,19 +109,21 @@ Entra neste PR:
 Não entra neste PR:
 
 - retrieval semântico
-- busca vetorial
+- busca vetorial como fluxo funcional novo
 - ranking ou re-ranking
 - chunking de conteúdo
+- múltiplos embeddings por ingestion
 - pipeline vetorial completo
-- múltiplos providers de embeddings
-- estratégias de fallback, retry ou DLQ
+- provider real sofisticado para embeddings
+- fallback, retry ou DLQ
 - abstrações genéricas para storage vetorial
 - orquestração separada para embeddings
+- redesign do fluxo de ingestion
 - expansão transversal do uso de embeddings para outros módulos
-- observabilidade expandida específica para o fluxo vetorial
-- qualquer redesenho do fluxo principal de ingestion
+- observabilidade expandida específica do fluxo vetorial
+- qualquer camada paralela de `vector-database` sem uso real no fluxo final
 
-Esta seção é propositalmente restritiva para preservar a natureza incremental da entrega e evitar leitura exagerada do escopo.
+Esta seção é propositalmente restritiva para proteger o recorte implementado e evitar interpretação acima da entrega real.
 
 ---
 
@@ -121,59 +131,94 @@ Esta seção é propositalmente restritiva para preservar a natureza incremental
 
 ```mermaid
 flowchart LR
-    A[Ingestion já persistida] --> B[Processamento existente]
-    B --> C[Geração mínima de embedding]
-    C --> D[Persistência vetorial local]
-    D --> E[Fluxo concluído com integração real]
+    A[Ingestion já persistida e enfileirada] --> B[IngestionProcessor]
+    B --> C[Extrai content do payload]
+    C --> D[Gera embedding mínimo]
+    D --> E[Persiste em document_embeddings]
+    E --> F[Atualiza ingestion para completed]
 
     classDef dark fill:#0f172a,stroke:#22d3ee,color:#e5f9ff,stroke-width:1.5px;
-    class A,B,C,D,E dark;
+    class A,B,C,D,E,F dark;
 ```
 
 Leitura do fluxo:
 
-1. a ingestion segue entrando pelo caminho já existente
-2. o processamento atual alcança o ponto mínimo em que o conteúdo pode ser transformado em embedding
-3. o embedding é gerado no próprio fluxo operacional já controlado
-4. o resultado é persistido na base vetorial local
-5. a integração ponta a ponta passa a existir sem necessidade de expandir a arquitetura além desse acoplamento mínimo
+1. o job já existente da ingestion é consumido normalmente
+2. o processor valida a ingestion e move o status para `processing`
+3. o conteúdo textual é extraído do payload persistido
+4. o embedding é gerado no próprio fluxo operacional atual
+5. o vetor é persistido em `document_embeddings`
+6. a ingestion só então é concluída como `completed`
+7. se qualquer etapa falhar após entrar em `processing`, a ingestion é marcada como `failed` com `failureReason`
 
 ---
 
 ## 7. Contratos Mínimos
 
-Do ponto de vista externo, este PR não precisa inflar contratos públicos já existentes. O foco está na integração interna mínima entre processamento e persistência vetorial.
+Do ponto de vista externo, esta PR não infla contratos públicos já existentes. O recorte permanece concentrado em contratos internos mínimos necessários para geração e persistência do embedding.
 
-Contratos mínimos envolvidos no recorte:
+Contratos mínimos envolvidos:
 
-- **entrada operacional do fluxo**: conteúdo textual já disponível no processamento da ingestion
-- **saída mínima da geração**: vetor numérico gerado a partir do conteúdo processado
-- **persistência mínima**: registro vetorial associado ao item de ingestion que originou a geração
+### Contrato operacional da ingestion
+A ingestion continua trabalhando com payload genérico, mas o processamento desta PR passa a exigir a presença de:
 
-O princípio aqui é simples:
+```ts
+{
+  content: string
+}
+```
 
-- não inventar novos contratos externos sem necessidade
-- não ampliar payloads públicos apenas para acomodar a integração interna
-- introduzir somente os dados estritamente necessários para gerar e persistir o embedding
+como shape mínimo necessário para o recorte atual.
 
-Se já houver contrato interno consolidado para o item processado, ele é mantido e apenas enriquecido no ponto mínimo necessário para a persistência vetorial.
+### Saída mínima da geração
+A geração de embeddings produz:
+
+```ts
+number[]
+```
+
+sem introduzir metadados adicionais, múltiplos vetores ou contratos mais ricos.
+
+### Persistência mínima
+A persistência vetorial ocorre com o shape:
+
+```ts
+{
+  id: string
+  content: string
+  embedding: number[]
+}
+```
+
+onde:
+
+- `id` = `ingestion.id`
+- `content` = conteúdo textual processado
+- `embedding` = vetor numérico gerado
+
+O princípio mantido aqui é simples:
+
+- não ampliar contratos externos sem necessidade
+- não introduzir payloads artificiais
+- persistir apenas o mínimo necessário para validar a integração operacional da fase
 
 ---
 
 ## 8. Regras de Implementação
 
-Para manter aderência ao padrão do projeto, esta PR deve seguir os seguintes guardrails:
+Para manter aderência ao padrão do projeto, esta PR segue os seguintes guardrails:
 
-- controller permanece fino e focado no boundary HTTP, sem absorver regra vetorial
-- service/processador concentra o fluxo operacional de forma explícita e legível
-- repository/DAO permanece restrito à persistência, sem decidir o fluxo de negócio
-- geração de embeddings entra apenas como passo mínimo necessário dentro do processamento atual
-- persistência vetorial ocorre sem wrappers paralelos ou camada genérica prematura
-- nenhuma abstração deve ser criada apenas por antecipação de evolução futura
-- nenhuma fase futura deve ser escondida dentro desta entrega
-- o fluxo principal precisa continuar visível, direto e fácil de revisar
+- controller permanece fino e fora da regra vetorial
+- o `IngestionProcessor` concentra explicitamente o fluxo principal da integração
+- `EmbeddingGeneratorService` existe apenas como etapa mínima de geração
+- `DocumentEmbeddingsService` permanece como serviço simples de aplicação para persistência
+- `DocumentEmbeddingsDao` permanece restrito à persistência e busca vetorial
+- nenhuma abstração nova foi criada apenas por antecipação
+- nenhum módulo paralelo de persistência vetorial foi mantido no fluxo final
+- nenhuma fase futura foi embutida dentro desta entrega
+- o fluxo principal continua visível, direto e fácil de revisar
 
-A regra central desta PR é: integrar de forma real, mas no menor recorte possível.
+A regra central desta PR é: integrar de forma real, mas no menor recorte possível e usando o caminho já consolidado no projeto.
 
 ---
 
@@ -181,31 +226,35 @@ A regra central desta PR é: integrar de forma real, mas no menor recorte possí
 
 O review desta PR deve validar principalmente:
 
-- se a PR realmente continua a PR 19 sem reabrir arquitetura já aprovada
-- se a integração entre ingestion e persistência vetorial foi feita no menor recorte funcional possível
-- se o fluxo principal continua explícito e fácil de acompanhar
-- se a geração de embeddings não introduz camadas artificiais ou abstrações sem uso real
-- se a persistência vetorial ficou restrita ao papel de persistência, sem assumir orquestração indevida
-- se o escopo permaneceu controlado, sem embutir retrieval, chunking ou pipeline completo
-- se a entrega está proporcional ao slice e pronta para revisão rápida
+- se a PR continua a base anterior sem reabrir arquitetura já aprovada
+- se a integração entre ingestion e embeddings foi feita dentro do fluxo já existente
+- se o `IngestionProcessor` permaneceu explícito e fácil de acompanhar
+- se o payload textual mínimo foi tratado sem inflar contratos públicos
+- se a geração de embedding entrou sem abstração prematura
+- se a persistência vetorial ficou restrita ao `DocumentEmbeddingsService` e ao `DocumentEmbeddingsDao`
+- se o `EmbeddingsModule` e o `IngestionModule` ficaram corretamente conectados
+- se o escopo permaneceu controlado, sem retrieval, chunking ou pipeline vetorial expandido
+- se os testes refletem o novo fluxo e os cenários de falha relevantes da integração
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] A base vetorial local previamente introduzida continua sendo reutilizada sem redesign
-- [ ] O fluxo de ingestion passa a acionar a geração de embedding dentro do processamento já existente
-- [ ] O embedding gerado é persistido com associação operacional ao item processado
-- [ ] O fluxo ponta a ponta é validável localmente sem necessidade de componentes adicionais fora do recorte
+- [ ] O fluxo de ingestion passa a extrair `content` do payload durante o processamento
+- [ ] O processor gera um embedding mínimo a partir do conteúdo processado
+- [ ] O embedding gerado é persistido em `document_embeddings`
+- [ ] O registro vetorial é persistido usando `ingestion.id` como identificador
+- [ ] A ingestion só é marcada como `completed` após a persistência do embedding
+- [ ] Erros após entrada em `processing` continuam marcando a ingestion como `failed` com `failureReason`
+- [ ] `EmbeddingsModule` e `IngestionModule` ficam alinhados ao novo fluxo
 - [ ] Não foram introduzidos retrieval, chunking, ranking, retries ou abstrações genéricas além do necessário
-- [ ] O fluxo principal permanece simples, explícito e aderente ao padrão já aprovado do projeto
 
 ---
 
 ## 11. Conclusão
 
-A PR 20 representa a continuidade natural da PR 19.
+A PR 20 representa a continuidade natural da fundação vetorial já introduzida anteriormente.
 
-Se a PR anterior consolidou a fundação mínima de persistência vetorial local, esta entrega adiciona o próximo passo funcional correto: colocar essa base em uso dentro de um fluxo real já existente da aplicação, conectando ingestion, geração de embeddings e armazenamento vetorial no menor recorte operacional possível.
+Se a etapa anterior deixou pronta a base mínima de persistência vetorial local, esta entrega adiciona o próximo passo funcional correto: colocar essa base em uso dentro de um fluxo real já existente da aplicação, conectando ingestion, geração de embeddings e persistência vetorial no menor recorte operacional possível.
 
-O ganho desta PR é objetivo e proporcional ao slice: a aplicação passa a ter uma primeira integração vetorial real, sem redesenho, sem inflar contratos e sem antecipar fases futuras. O resultado é uma evolução pequena, funcional, revisável e coerente com o padrão técnico já consolidado no projeto.
+O ganho desta PR é objetivo e proporcional ao slice implementado: o sistema passa a ter a primeira integração vetorial ponta a ponta dentro do processamento real da ingestion, sem redesenho, sem inflar contratos e sem antecipar fases futuras. O resultado é uma evolução pequena, funcional, revisável e coerente com o padrão técnico já consolidado no projeto.
