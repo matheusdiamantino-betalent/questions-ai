@@ -7,7 +7,7 @@
 
 ![PR](https://img.shields.io/badge/PR-23-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-pivot%20agents-1d4ed8?style=for-the-badge&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-pivot%20agents-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
 ![Escopo](https://img.shields.io/badge/escopo-primeiro%20workflow%20funcional-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
@@ -20,7 +20,7 @@
 >
 > - preserva integralmente a base criada anteriormente
 > - adiciona um único fluxo real orientado por prompt
-> - valida uso fim a fim com recorte pequeno e revisável
+> - valida o uso fim a fim com recorte pequeno e revisável
 >
 > **Esta PR não implementa agents completos, tools dinâmicas, memória, planner, multi-step workflows ou orquestração avançada.**
 
