@@ -105,6 +105,12 @@ Não entra neste PR:
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "lineColor": "#22d3ee"
+  }
+}}%%
 flowchart LR
     A["Fluxo de domínio existente"] --> B["Ponto de integração real"]
     B --> C["LangchainService"]
