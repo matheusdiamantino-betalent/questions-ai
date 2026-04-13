@@ -15,16 +15,16 @@
 
 ## 📌 Sumário
 
-1. Contexto Atual  
-2. Problema a Resolver  
-3. O Que São Agents Básicos Neste Contexto  
-4. Mapeamento do Ecossistema  
-5. Comparação Objetiva para o Recorte Atual  
-6. Stack Mínima Recomendada  
-7. Fases Propostas (com exemplos)  
-8. Direção Arquitetural  
-9. Decisões a Fechar  
-10. Conclusão
+1. [Contexto Atual](#1-contexto-atual)  
+2. [Problema a Resolver](#2-problema-a-resolver)  
+3. [O Que São Agents Básicos Neste Contexto](#3-o-que-são-agents-básicos-neste-contexto)  
+4. [Mapeamento do Ecossistema](#4-mapeamento-do-ecossistema)  
+5. [Comparação Objetiva para o Recorte Atual](#5-comparação-objetiva-para-o-recorte-atual)  
+6. [Stack Mínima Recomendada](#6-stack-mínima-recomendada)  
+7. [Fases Propostas (com exemplos)](#7-fases-propostas-com-exemplos)  
+8. [Direção Arquitetural](#8-direção-arquitetural)  
+9. [Decisões a Fechar](#9-decisões-a-fechar)  
+10. [Conclusão](#10-conclusão)
 
 ---
 
