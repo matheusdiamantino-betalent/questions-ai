@@ -16,13 +16,13 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR é a continuação direta da PR 29. Depois de materializar a foundation mínima em `shared/ai`, o próximo passo correto é validar essa base em um único consumo funcional real, pequeno e controlado, dentro de `modules/content`.
+> Esta PR é a continuação direta da PR 29. Depois de materializar a foundation mínima em `shared/ai`, o próximo passo correto é validar essa base em um consumo funcional real, pequeno e controlado, dentro de `modules/content`.
 >
 > - mantém a foundation compartilhada introduzida na PR 29
-> - valida essa foundation em um fluxo real de negócio dentro de `content`
-> - preserva `shared/ai` como capability compartilhada e `content` como boundary consumidor
+> - faz `content` consumir a capability já consolidada em `shared/ai`
+> - preserva a separação entre base compartilhada e boundary funcional consumidor
 >
-> **Este PR não expande a foundation, não introduz LangGraph, não abre múltiplos produtos, não cria framework genérico de agents e não amplia o recorte além do primeiro consumo funcional necessário.**
+> **Este PR não expande a foundation, não introduz LangGraph, não abre múltiplos fluxos de negócio, não cria framework genérico de agents e não amplia o recorte além do primeiro consumo funcional necessário.**
 
 ---
 
@@ -44,11 +44,11 @@
 
 ## 1. Síntese Executiva
 
-A PR 29 consolidou a primeira materialização funcional mínima de `shared/ai`, deixando o projeto com uma capability compartilhada real para runtime e consumo controlado de conhecimento, sem inflar a discussão estratégica em uma entrega estrutural maior do que o necessário.
+A PR 29 consolidou a primeira foundation funcional mínima em `shared/ai`, reunindo o runtime compartilhado e as capacidades básicas já necessárias para execução com LLM e uso controlado de retrieval, sem transformar a fase em uma entrega estrutural maior do que o recorte pedia.
 
-A PR 30 continua exatamente desse ponto. Em vez de ampliar a foundation ou abrir novas frentes paralelas, ela valida essa base em um único fluxo funcional real dentro de `modules/content`, comprovando que a separação entre capability compartilhada e boundary de negócio funciona também em uso concreto.
+A PR 30 continua exatamente desse ponto. Em vez de ampliar a base compartilhada ou abrir novas frentes em paralelo, ela valida essa foundation em um único fluxo funcional real dentro de `modules/content`, comprovando que a capability criada na PR anterior já consegue ser consumida por um boundary de negócio de forma direta, útil e revisável.
 
-O passo correto aqui não é reorganizar mais a estrutura, mas demonstrar que a estrutura já criada é suficiente para suportar um caso real com baixo ruído, sem duplicação de lógica e sem transformar o módulo consumidor em novo dono da infraestrutura de IA.
+O ganho desta entrega não está em criar nova infraestrutura, e sim em mostrar que a infraestrutura já criada é suficiente para suportar um caso real sem duplicação local, sem reabrir arquitetura e sem deslocar responsabilidades para o módulo consumidor.
 
 ---
 
@@ -56,17 +56,17 @@ O passo correto aqui não é reorganizar mais a estrutura, mas demonstrar que a 
 
 - validar a foundation da PR 29 em um fluxo funcional real
 - fazer `modules/content` consumir `shared/ai` como capability compartilhada
-- evitar duplicação de lógica de IA no boundary consumidor
-- manter a separação clara entre runtime compartilhado e regra de negócio
-- estabelecer o primeiro uso concreto da base comum antes de qualquer expansão posterior
+- reaproveitar `AiService`, `EmbeddingsService`, `LangchainModel`, `LangchainLib` e o acesso vetorial já existentes
+- evitar duplicação de lógica de IA dentro do boundary consumidor
+- confirmar a separação entre capability compartilhada e fluxo funcional de negócio
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão central desta PR é manter `shared/ai` como dono das capacidades reutilizáveis e fazer `modules/content` consumir essa capability apenas no ponto funcional em que ela é necessária. A arquitetura aprovada permanece a mesma: a base compartilhada concentra runtime, integração e composição técnica, enquanto o módulo de negócio continua responsável apenas pelo seu caso de uso.
+A decisão central desta PR é manter `shared/ai` como dono das capacidades reutilizáveis e fazer `modules/content` consumir essas capacidades apenas no ponto funcional em que elas são necessárias. A arquitetura aprovada permanece a mesma: `shared/ai` concentra runtime, serviços e integração técnica; `content` continua responsável apenas pelo seu caso de uso.
 
-Nesta etapa, a evolução não acontece por nova fundação nem por abstrações adicionais. Ela acontece por uma integração objetiva entre o boundary consumidor e o runtime já disponível. O valor desta PR está justamente em provar o consumo real da base comum sem redesenhar o projeto, sem reabrir decisões anteriores e sem preparar cenários que ainda não entraram no recorte.
+Nesta etapa, a evolução não acontece por nova reorganização estrutural nem por abstrações adicionais. Ela acontece por uma integração objetiva entre o boundary consumidor e os componentes já materializados na PR 29. O valor desta PR está justamente em provar esse consumo real usando a base já disponível, sem criar uma segunda fundação local e sem inflar o módulo de negócio.
 
 ---
 
@@ -74,11 +74,11 @@ Nesta etapa, a evolução não acontece por nova fundação nem por abstrações
 
 Entram nesta PR apenas os pontos necessários para o primeiro consumo funcional da foundation:
 
-- integração de `modules/content` com o runtime já disponível em `shared/ai`
-- uso de um único fluxo funcional real para validar a capability compartilhada
-- composição mínima entre entrada do boundary consumidor, execução compartilhada e retorno útil
-- reaproveitamento da base existente sem duplicação local de lógica de IA
-- manutenção do shape atual do projeto, com controller fino e fluxo principal explícito
+- integração de `content.controller.ts`, `content.service.ts` e `content.module.ts` com a capability já disponível em `shared/ai`
+- consumo de `AiService` e `EmbeddingsService` a partir do boundary `content`
+- reaproveitamento dos componentes já existentes em `shared/ai`, incluindo `langchain.lib.ts`, `langchain.model.ts` e `document-embeddings.dao.ts`, sem duplicação local
+- composição mínima entre entrada HTTP, serviço funcional do módulo e execução compartilhada
+- manutenção do shape atual do projeto, com fluxo principal explícito e poucas moving parts
 
 ---
 
@@ -87,12 +87,13 @@ Entram nesta PR apenas os pontos necessários para o primeiro consumo funcional 
 Ficam explicitamente fora desta PR:
 
 - expansão estrutural adicional dentro de `shared/ai`
-- múltiplos fluxos consumidores ao mesmo tempo
+- novos módulos consumidores além de `content`
+- múltiplos fluxos funcionais de consumo ao mesmo tempo
 - abstração genérica para diversos tipos de prompt, agent ou tool execution
 - LangGraph, planner, memória conversacional ou orquestração complexa
-- rollout transversal para outros boundaries além do primeiro caso em `content`
-- redesign de contratos públicos já existentes sem pressão real do fluxo
-- retries, cache, observabilidade expandida, fila dedicada, fallback de modelo ou preparo indireto de próximas fases
+- redesign dos contratos públicos existentes sem pressão real do fluxo
+- retries, cache, observabilidade expandida, fila dedicada, fallback de modelo ou preparação indireta da próxima fase
+- mudanças de responsabilidade em `ingestion`, que permanece apenas como contexto anterior já consolidado
 
 ---
 
@@ -101,29 +102,31 @@ Ficam explicitamente fora desta PR:
 ```mermaid
 %%{init: {'theme':'dark','themeVariables':{'primaryColor':'#0f172a','primaryTextColor':'#e5e7eb','primaryBorderColor':'#39ff14','lineColor':'#00e5ff','secondaryColor':'#111827','tertiaryColor':'#111827'}}}%%
 flowchart LR
-    A["request em modules/content"] --> B["serviço funcional do boundary"]
-    B --> C["shared/ai runtime"]
-    C --> D["retrieval mínimo opcional"]
-    C --> E["execução compartilhada"]
-    E --> F["resultado útil"]
-    F --> G["resposta do fluxo de content"]
+    A["request em modules/content"] --> B["ContentController"]
+    B --> C["ContentService"]
+    C --> D["AiService / EmbeddingsService"]
+    D --> E["LangchainModel / LangchainLib"]
+    D --> F["DocumentEmbeddingsDao"]
+    E --> G["resultado útil"]
+    F --> G
+    G --> H["resposta do fluxo de content"]
 ```
 
 ---
 
 ## 7. Contratos Mínimos
 
-Esta PR não deve inflar o contrato público do sistema nem introduzir uma API genérica de IA. O contrato novo, quando existir, deve ser apenas o mínimo necessário para permitir que o fluxo funcional de `content` acione a capability compartilhada e receba um resultado útil de forma explícita.
+Esta PR não deve inflar o contrato público do sistema nem introduzir uma interface genérica de IA. O contrato novo, quando existir, deve ser apenas o mínimo necessário para permitir que `content` acione a capability compartilhada e receba um resultado útil de forma explícita.
 
-No boundary consumidor, o contrato deve refletir somente a necessidade real do caso atendido nesta entrega. Em `shared/ai`, os contratos internos devem permanecer pequenos, orientados ao fluxo e sem generalização prematura para cenários ainda inexistentes.
+No boundary consumidor, o contrato deve refletir somente a necessidade real do caso atendido nesta entrega. Em `shared/ai`, os contratos internos permanecem pequenos, orientados ao fluxo já existente e sem generalização prematura para cenários ainda não abertos.
 
 ---
 
 ## 8. Regras de Implementação
 
-O controller em `content` deve permanecer fino e focado em HTTP. O serviço funcional do módulo consumidor deve concentrar apenas a orquestração mínima do caso de uso. O runtime compartilhado em `shared/ai` continua responsável pelas capacidades reutilizáveis de execução e retrieval. DAO, quando envolvido, permanece restrito à persistência e ao acesso vetorial, sem absorver decisão de negócio do boundary consumidor.
+O controller em `content` deve permanecer fino e focado em HTTP. O `ContentService` deve concentrar apenas a orquestração mínima do caso de uso. Em `shared/ai`, `AiService`, `EmbeddingsService`, `LangchainModel`, `LangchainLib` e `DocumentEmbeddingsDao` continuam responsáveis pelas capacidades reutilizáveis já introduzidas, sem deslocar regra de negócio para dentro da camada compartilhada.
 
-Também é importante que o primeiro consumo não abra múltiplos caminhos paralelos. O reviewer precisa entender a entrega lendo poucos arquivos centrais e enxergando o fluxo principal com facilidade. Esta PR existe para comprovar o uso real da foundation já criada, não para expandir abstrações “aproveitando a oportunidade”.
+Também é importante que o primeiro consumo não abra múltiplos caminhos paralelos. O reviewer deve conseguir entender a entrega lendo poucos arquivos centrais e enxergando rapidamente o fluxo principal: entrada em `content`, delegação para a capability compartilhada e retorno útil. Esta PR existe para comprovar o uso real da foundation já criada, não para ampliar abstrações aproveitando o primeiro ponto de consumo.
 
 ---
 
@@ -134,28 +137,28 @@ O review desta PR deve validar principalmente os seguintes pontos:
 - a PR continua a PR 29 de forma natural, sem reabrir a fase foundation
 - `modules/content` consome `shared/ai` como capability compartilhada real
 - o fluxo funcional entregue é pequeno, concreto e fácil de revisar
-- não houve duplicação de lógica de IA dentro do módulo consumidor
+- não houve duplicação de `AiService`, `EmbeddingsService`, `LangchainModel`, `LangchainLib` ou acesso vetorial dentro do módulo consumidor
 - o boundary de negócio permaneceu consumidor, e não dono da infraestrutura compartilhada
 - não foram criadas abstrações genéricas além da pressão real deste caso
 - o fluxo principal continua explícito e com pouca cerimônia
-- a entrega prova a utilidade da foundation sem tentar expandir o roadmap inteiro
+- a entrega valida a utilidade da foundation sem tentar expandir o roadmap inteiro
 
 ---
 
 ## 10. Critérios de Aceite
 
 - [ ] existe um fluxo funcional real em `modules/content` consumindo a foundation introduzida na PR 29
-- [ ] `shared/ai` permanece como capability compartilhada reutilizável, sem duplicação local no consumidor
+- [ ] `content.controller.ts`, `content.service.ts` e `content.module.ts` estão integrados ao uso de `shared/ai` sem duplicação local
+- [ ] `AiService` e `EmbeddingsService` são reutilizados como capability compartilhada do projeto
+- [ ] `LangchainModel`, `LangchainLib` e `DocumentEmbeddingsDao` permanecem concentrados em `shared/ai`
 - [ ] o controller do boundary permanece fino e o fluxo principal pode ser entendido rapidamente
-- [ ] o consumo do runtime compartilhado acontece por contratos mínimos e explícitos
 - [ ] não foram introduzidos LangGraph, múltiplos agents, tool registry genérico ou expansão estrutural indevida
 - [ ] a implementação permanece proporcional ao slice e aderente ao shape atual do projeto
-- [ ] a PR valida uso real da foundation sem reabrir arquitetura aprovada
 
 ---
 
 ## 11. Conclusão
 
-A PR 30 é o passo que transforma a foundation mínima da PR 29 em uso funcional concreto. Depois de consolidar `shared/ai` como base compartilhada e materializar seu runtime inicial, a evolução correta agora é validá-lo em um consumidor real, pequeno e controlado.
+A PR 30 é o passo que transforma a foundation mínima da PR 29 em consumo funcional concreto. Depois de consolidar `shared/ai` como base compartilhada e materializar seus componentes iniciais de runtime e retrieval, a evolução correta agora é validá-los em um boundary real de negócio, pequeno e controlado.
 
-O ganho desta entrega está em confirmar, com um caso funcional único e revisável, que a separação arquitetural aprovada continua correta: capability compartilhada em `shared/ai`, boundary funcional em `modules/content`, integração explícita e baixo ruído. A PR mantém a fase coesa, prova reutilização real e evita antecipar expansão estrutural antes de existir pressão concreta para isso.
+O ganho desta entrega está em confirmar, com um único caso funcional revisável, que a separação arquitetural aprovada continua correta: capability compartilhada em `shared/ai`, boundary funcional em `modules/content`, integração explícita e baixo ruído. A PR mantém a fase coesa, prova reutilização real com a árvore atual do projeto e evita antecipar expansão estrutural antes de existir pressão concreta para isso.
