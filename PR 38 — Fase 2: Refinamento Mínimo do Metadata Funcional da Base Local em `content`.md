@@ -1,5 +1,5 @@
-# 🧩 PR 38 — Fase 2: Refinamento Mínimo do Metadata Funcional da Base Local em `content`
-## Consolidação semântica do retorno funcional sobre uso de contexto local no boundary centralizador já aprovado
+# 🧩 PR 38 — Fase 2: Normalização Mínima da Query Funcional da Base Local em `content`
+## Calibração mínima do disparo contextual no boundary centralizador já aprovado
 
 ---
 
@@ -7,8 +7,8 @@
 
 ![PR](https://img.shields.io/badge/PR-38-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-metadata%20refinement-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-content%20refinando%20metadata-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-query%20normalization-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-content%20calibrando%20query-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,14 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR dá continuidade direta à PR 37. Após expor visibilidade funcional mínima sobre o uso da base local em `content`, o próximo passo natural é consolidar a semântica desse retorno, tornando o metadata mais claro, consistente e aderente ao que o fluxo realmente sabe.
+> Esta PR substitui uma evolução redundante por um passo funcional real após a PR 37. Depois de tornar explícito quando o fluxo utilizou contexto local, o próximo movimento natural é melhorar quando esse contexto deve ser consultado.
 >
 > - preserva `content` como boundary funcional centralizador
-> - refina o contrato externo sem expandir surface pública
-> - mantém `shared/ai` e `shared/ingestion` como capacidades internas
-> - melhora clareza funcional com recorte pequeno e revisável
+> - calibra o uso da base local sem alterar a arquitetura atual
+> - reduz consultas contextuais desnecessárias
+> - mantém o recorte pequeno, interno e revisável
 >
-> **Este PR não adiciona score, chunks, lista de documentos, dashboard, observabilidade expandida ou nova API pública.**
+> **Este PR não adiciona reranking, NLP, classificação de intenção, múltiplas estratégias de busca, nova API pública ou expansão estrutural.**
 
 ---
 
@@ -45,55 +45,54 @@
 
 ## 1. Síntese Executiva
 
-A PR 37 tornou explícito no retorno funcional de `content` quando o fluxo incluiu contexto local recuperado internamente. O próximo passo natural é refinar essa comunicação para que o contrato externo reflita com mais precisão o comportamento real do sistema.
+A PR 37 consolidou a visibilidade funcional do uso da base local em `content`. O sistema passou a informar quando o fluxo incluiu contexto recuperado internamente.
 
-Esta PR atua nesse ponto específico: ajustar nomes, consistência e semântica do metadata já existente, sem alterar o boundary aprovado e sem introduzir novos detalhes operacionais.
+O passo seguinte precisa agregar valor real sem repetir o movimento anterior. Por isso, esta PR atua antes da recuperação: calibrar de forma mínima quando a query funcional deve acionar a busca contextual.
 
-O foco permanece no menor passo útil: melhorar clareza funcional do retorno sem inflar arquitetura.
+O foco não está em sofisticar retrieval, e sim em tornar o consumo da base local mais previsível, econômico e coerente com o boundary já aprovado.
 
 ---
 
 ## 2. Objetivo do PR
 
-- refinar a semântica do metadata retornado por `content`
-- alinhar nomenclaturas ao comportamento real do fluxo
-- preservar o contrato pequeno e funcional
-- manter `content` como boundary centralizador
+- normalizar a query funcional derivada do payload em `content`
+- evitar busca contextual quando não houver conteúdo minimamente útil
+- reduzir consultas desnecessárias à base local
+- preservar `AiService` como executor contextual
 - evoluir com baixo ruído e alta revisabilidade
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão central desta PR é tratar o metadata como parte do contrato funcional do boundary já existente, e não como porta para exposição de detalhes internos.
+A decisão central desta PR é manter a inteligência mínima de disparo contextual dentro de `ContentService`, que já é o owner do caso de uso funcional.
 
-Por isso, a evolução acontece apenas sobre a semântica do retorno atual: nomes mais precisos, consistência entre camadas e clareza sobre o que de fato ocorreu no fluxo.
+Em vez de mover essa regra para novas camadas ou expandir `AiService`, o boundary centralizador decide se existe query útil para recuperação. Quando existir, o fluxo contextual segue normalmente. Quando não existir, a execução permanece funcional sem busca adicional.
 
-Não há novas rotas, novos módulos ou trilhas paralelas. O sistema continua concentrando a capability em `content`, enquanto recuperação vetorial e composição contextual permanecem internas.
+Com isso, a evolução continua local, proporcional e aderente ao desenho atual.
 
 ---
 
 ## 4. Escopo
 
-- revisar nomenclaturas do metadata funcional
-- alinhar retorno de `AiService` e `ContentService`
-- preservar shape enxuto do contrato externo
-- ajustar testes afetados pela consolidação semântica
-- manter comportamento funcional já aprovado
+- normalizar texto usado como `knowledgeQuery`
+- aplicar critério mínimo para decidir se a busca contextual deve ocorrer
+- manter prompt funcional atual
+n- preservar contrato externo enxuto
+- ajustar testes proporcionais ao slice
 
 ---
 
 ## 5. Fora de Escopo
 
-- score de similaridade no retorno
-- quantidade de chunks utilizados
-- lista de documentos recuperados
-- ids de fontes públicas
-- dashboard operacional
-- trilha administrativa
-- observabilidade expandida
-- múltiplas fontes documentais
 - reranking adicional
+- stemming ou NLP
+- classificação de intenção
+- múltiplas estratégias de busca
+- filtros semânticos avançados
+- score no retorno
+- lista de documentos usados
+- dashboard operacional
 - nova API pública de knowledge base
 - reorganização estrutural para cenários futuros
 
@@ -106,18 +105,20 @@ Não há novas rotas, novos módulos ou trilhas paralelas. O sistema continua co
 flowchart LR
     A[Requisição funcional] --> B[ContentController]
     B --> C[ContentService]
-    C --> D[AiService]
-    D --> E[Recuperação de contexto]
-    E --> F[Resposta funcional com metadata refinado]
+    C --> D{Query útil?}
+    D -- Sim --> E[AiService com contexto]
+    D -- Não --> F[AiService sem contexto]
+    E --> G[Resposta funcional]
+    F --> G
 ```
 
-O fluxo público permanece inalterado. O ajuste desta PR acontece na qualidade semântica do retorno já existente.
+O fluxo público permanece o mesmo. A diferença desta PR está em calibrar o disparo da recuperação antes da chamada contextual.
 
 ---
 
 ## 7. Contratos Mínimos
 
-O contrato continua pequeno. A mudança esperada é tornar o campo de sinalização semanticamente fiel ao que o sistema realmente sabe.
+O contrato externo continua pequeno. A mudança principal é interna: decidir se `knowledgeQuery` deve ou não ser enviada ao fluxo contextual.
 
 ```ts
 type ContentExecuteOutput = {
@@ -130,26 +131,26 @@ type ContentExecuteOutput = {
 };
 ```
 
-A intenção é comunicar que o contexto foi incluído no fluxo, e não afirmar algo que o modelo internamente utilizou de forma verificável.
+Nenhum detalhe adicional de retrieval deve ser exposto ao consumidor externo.
 
 ---
 
 ## 8. Regras de Implementação
 
-A implementação deve seguir o menor caminho útil. O comportamento funcional permanece o mesmo; o foco está em nomenclatura, consistência e atualização proporcional dos testes.
+A implementação deve seguir o menor caminho útil. `ContentService` pode normalizar o payload e aplicar um critério simples de tamanho mínimo ou utilidade básica antes de enviar `knowledgeQuery`.
 
-`ContentController` permanece fino. `ContentService` continua como owner do caso de uso funcional. `AiService` segue responsável pela composição contextual e sinalização interna.
+`ContentController` permanece fino. `AiService` continua responsável pela recuperação e composição contextual quando acionado. Nenhuma nova camada deve ser criada para esta decisão local.
 
-Se houver dúvida entre expandir o contrato ou apenas refiná-lo semanticamente, esta PR deve favorecer a segunda opção.
+Se houver dúvida entre regra simples local ou framework de query intelligence, esta PR deve favorecer a primeira opção.
 
 ---
 
 ## 9. Critérios de Review
 
 - `content` permanece como boundary funcional centralizador
-- o metadata está semanticamente mais preciso
-- `AiService` e `ContentService` estão consistentes entre si
-- não houve exposição de detalhes internos de retrieval
+- a busca contextual só ocorre quando houver query minimamente útil
+- `AiService` não recebeu responsabilidade indevida
+- o contrato externo permaneceu enxuto
 - o ajuste ficou pequeno, claro e proporcional ao slice
 - a PR se posiciona como continuação natural da PR 37
 
@@ -157,18 +158,18 @@ Se houver dúvida entre expandir o contrato ou apenas refiná-lo semanticamente,
 
 ## 10. Critérios de Aceite
 
-- [ ] o fluxo funcional permanece centralizado em `content`
-- [ ] o metadata usa nomenclatura aderente ao comportamento real
-- [ ] `AiService` e `ContentService` compartilham o mesmo contrato semântico
-- [ ] nenhum detalhe interno adicional vazou no retorno externo
-- [ ] testes afetados foram ajustados e continuam passando
-- [ ] a implementação permaneceu pequena e revisável
+- [ ] payload continua validado no fluxo funcional
+- [ ] query funcional é normalizada antes do uso
+- [ ] consultas contextuais desnecessárias foram reduzidas
+- [ ] `AiService` continua owner da execução contextual
+- [ ] nenhum detalhe interno adicional vazou no contrato externo
+- [ ] testes afetados continuam passando
 
 ---
 
 ## 11. Conclusão
 
-A PR 38 representa o passo incremental esperado após a PR 37: consolidar semanticamente o metadata funcional da base local em `content`.
+A PR 38 evolui o eixo iniciado na PR 37 sem redundância. Em vez de apenas renomear contratos, a entrega melhora o momento em que a base local é consultada dentro do fluxo funcional de `content`.
 
-Sem expandir surface pública, sem abrir novas trilhas e sem inflar o contrato, a entrega melhora a clareza do boundary já aprovado e mantém a evolução do projeto simples, consistente e aderente ao momento atual.
+O resultado é uma evolução pequena, revisável e útil: consumo contextual mais previsível, menos ruído operacional e preservação total do boundary já aprovado.
 
