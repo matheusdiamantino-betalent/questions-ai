@@ -5,7 +5,7 @@
 
 <div align="left">
 
-![PR](https://img.shields.io/badge/PR-33-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
+![PR](https://img.shields.io/badge/PR-34-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-base%20local%20de%20conhecimento-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
 ![Escopo](https://img.shields.io/badge/escopo-ingestao%20vetorial%20juridica%20inicial-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
@@ -16,14 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR é a continuação natural da PR 32. Após validar a entrada mínima de LangGraph dentro de `shared/ai`, o próximo passo funcional correto é dar utilidade real à foundation já consolidada por meio de uma base local inicial de conhecimento, usando uma fonte concreta, estável e juridicamente relevante como primeiro corpus vetorial.
+> Esta PR continua a sequência funcional das PRs 29–33 ao transformar a foundation compartilhada em uma base local concreta de conhecimento. A entrega implementa a primeira ingestão vetorial real usando o Código Civil como corpus inicial, com execução isolada por módulo dedicado para evitar acoplamento indevido ao runtime HTTP principal.
 >
-> - preserva a foundation compartilhada consolidada nas PRs 29, 30, 31 e 32
-> - materializa o primeiro corpus jurídico real para uso local dentro de `shared/ai`
-> - usa o **Código Civil (Lei nº 10.406/2002)**, a partir da versão compilada publicada no Planalto, como fonte inicial fixa e controlada
-> - valida um fluxo mínimo de leitura, particionamento, embedding e persistência vetorial sem expor `modules/content` aos detalhes da ingestão
+> - preserva a arquitetura já aprovada em `shared/ai`
+> - materializa ingestão real de fonte jurídica pública e estável
+> - persiste chunks vetoriais no banco local
+> - introduz módulo separado apenas para execução isolada do processo de ingestão
 >
-> **Este PR não introduz crawler genérico, múltiplas fontes, sincronização automática, reindexação sofisticada, versionamento documental, pipeline universal de parsing ou expansão transversal de knowledge ingestion.**
+> **Este PR não introduz crawler genérico, múltiplas fontes, scheduler, pipeline expandido, reindexação automática ou redesign arquitetural.**
 
 ---
 
@@ -45,60 +45,61 @@
 
 ## 1. Síntese Executiva
 
-A PR 29 consolidou a foundation inicial de `shared/ai` como boundary técnico reutilizável. A PR 30 validou o primeiro consumo funcional dessa base em `modules/content`. A PR 31 expandiu o uso real do runtime compartilhado no mesmo fluxo, preservando o boundary aprovado. A PR 32 introduziu LangGraph de forma mínima e controlada como capacidade interna do runtime, sem transformar a arquitetura em uma plataforma inflada de agents.
+As PRs anteriores consolidaram o boundary compartilhado de IA, validaram consumo real em `modules/content` e introduziram capacidades internas adicionais sem inflar a arquitetura. O próximo passo natural era tornar essa foundation útil com conhecimento local persistido.
 
-A PR 33 continua essa trilha com um passo mais útil do que expandir orchestration: introduzir a primeira base local real de conhecimento sobre a foundation já existente. O foco agora deixa de ser apenas provar capacidade interna e passa a validar um fluxo concreto de ingestão vetorial com uma fonte jurídica fixa, estável e revisável, permitindo que o projeto tenha um primeiro corpus local persistido para consultas sem depender apenas de execução textual isolada.
+Esta PR implementa a primeira ingestão vetorial real a partir do Código Civil compilado no portal do Planalto. O fluxo busca a fonte remota, extrai texto, particiona o conteúdo, gera embeddings placeholder compatíveis com a estrutura atual e persiste os registros em `document_embeddings`.
 
-Nesta entrega, a fonte escolhida é o **Código Civil (Lei nº 10.406, de 10 de janeiro de 2002)**, utilizando a versão compilada disponibilizada no portal oficial do Planalto como corpus inicial. O ganho funcional está em fechar o primeiro ciclo mínimo de conhecimento local: ler uma base legal real, particionar de forma simples, gerar embeddings e persistir esse material no banco vetorial. Isso cria a primeira base jurídica local utilizável dentro de `shared/ai`, mantendo o escopo pequeno, explícito e alinhado ao feedback funcional já recebido nas PRs anteriores.
+Também foi introduzido um módulo dedicado de ingestão. A separação não cria nova arquitetura de domínio; ela apenas permite executar o processo em contexto isolado, sem carregar dependências desnecessárias de `ContentModule`, guards HTTP ou fluxos não relacionados. É uma separação pragmática para este job técnico específico.
 
 ---
 
 ## 2. Objetivo do PR
 
-- introduzir a primeira ingestão vetorial mínima de corpus jurídico real em `shared/ai`
-- usar o Código Civil publicado no Planalto como fonte inicial fixa da base local de conhecimento
-- validar o fluxo mínimo de leitura, particionamento, embedding e persistência vetorial
-- manter o consumo dessa capacidade encapsulado no boundary compartilhado
-- transformar a foundation existente em uma base local concretamente utilizável sem inflar o recorte
+- implementar a primeira ingestão vetorial real em `shared/ai`
+- usar o Código Civil como corpus jurídico inicial
+- persistir conhecimento local no banco vetorial existente
+- executar a ingestão via runner isolado e módulo mínimo dedicado
+- manter `modules/content` sem acoplamento ao processo interno de carga
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão central desta PR é tratar a base local de conhecimento como continuação prática do runtime compartilhado já aprovado, e não como abertura de uma nova frente de infraestrutura documental. Em vez de criar um sistema genérico de coleta e indexação, a entrega assume uma única fonte inicial fixa e controlada como corpus de validação.
+A decisão central desta PR é manter `shared/ai` como owner das capacidades reutilizáveis e tratar a ingestão como processo técnico interno. O conhecimento continua pertencendo ao runtime compartilhado, não ao módulo consumidor.
 
-Esse posicionamento preserva o shape do projeto. `shared/ai` continua sendo o owner das capacidades reutilizáveis, agora agregando o primeiro fluxo mínimo de knowledge ingestion. O módulo consumidor não passa a conhecer scraping, chunking, embeddings, documentos ou detalhes de armazenamento vetorial. Esses pontos permanecem internos ao boundary compartilhado.
+O `LegalKnowledgeIngestionModule` foi criado para compor apenas as dependências necessárias ao runner: `HttpModule`, DAO, embeddings e service de ingestão. Isso evita reutilizar `ContentModule` como contêiner genérico de providers, reduz ruído de bootstrap e preserva responsabilidade clara entre consumo HTTP e carga técnica de base local.
 
-A escolha pelo Código Civil como primeiro corpus reduz ambiguidade, facilita review e ancora a entrega em uma base legal estável, pública e imediatamente útil para o domínio pretendido. O objetivo da PR não é resolver o problema completo de aquisição de conhecimento, mas provar que a arquitetura atual já comporta uma primeira base local útil e persistida com o menor número possível de moving parts.
+Não há abertura de subplataforma de jobs nem novo boundary de negócio. Existe apenas isolamento operacional proporcional ao slice atual.
 
 ---
 
 ## 4. Escopo
 
-- definir o Código Civil compilado no portal do Planalto como primeira fonte jurídica fixa do projeto
-- obter o conteúdo dessa fonte dentro de um fluxo mínimo e controlado
-- aplicar particionamento simples e legível sobre o conteúdo obtido
-- gerar embeddings para os trechos produzidos
-- persistir os registros no banco vetorial já previsto na foundation compartilhada
-- manter o fluxo concentrado em `shared/ai`, sem vazamento estrutural para `modules/content`
-- deixar validado o primeiro uso real de conhecimento local dentro da sequência das PRs 29–32
+- criar `LegalKnowledgeIngestionService`
+- criar runner de execução manual da ingestão
+- criar módulo dedicado para bootstrap isolado
+- buscar HTML do Código Civil no Planalto
+- extrair e normalizar texto da página
+- gerar chunks com índice sequencial
+- gerar embeddings placeholder de dimensão compatível
+- persistir `source`, `content`, `chunkIndex` e vetor
+- ajustar schema/tabela para novos metadados mínimos
 
 ---
 
 ## 5. Fora de Escopo
 
-- crawler genérico para múltiplos domínios
-- ingestão de múltiplas leis, códigos ou bases documentais
-- sincronização automática de fontes remotas
-- atualização incremental sofisticada
-- versionamento documental
+- múltiplas fontes jurídicas
+n- crawler genérico
+- scheduler recorrente
+- fila de ingestão
+- retries sofisticados
 - deduplicação avançada
-- parser universal para HTML, PDF e outros formatos
-- pipeline completo de reindexação
-- painel operacional de ingestão
-- expansão de LangGraph para orquestrar a ingestão
-- rollout transversal imediato para outros consumidores
-- qualquer camada estrutural criada apenas como preparação para futuras fontes
+- parser universal para PDF/HTML arbitrário
+- embeddings reais de provider externo
+- busca semântica refinada por relevância jurídica
+- interface administrativa de ingestão
+- acoplamento direto com `modules/content`
 
 ---
 
@@ -107,73 +108,81 @@ A escolha pelo Código Civil como primeiro corpus reduz ambiguidade, facilita re
 ```mermaid
 %%{init: {'theme':'dark','themeVariables':{'primaryColor':'#0f172a','primaryTextColor':'#e5e7eb','primaryBorderColor':'#39ff14','lineColor':'#00e5ff','secondaryColor':'#111827','tertiaryColor':'#111827'}}}%%
 flowchart LR
-    A["Código Civil no Planalto"] --> B["Leitura controlada do conteúdo"]
-    B --> C["Particionamento mínimo"]
-    C --> D["Geração de embeddings"]
-    D --> E["Persistência vetorial em shared/ai"]
-    E --> F["Base local inicial disponível"]
+    A[Runner] --> B[LegalKnowledgeIngestionModule]
+    B --> C[Buscar Código Civil]
+    C --> D[Extrair Texto]
+    D --> E[Chunking]
+    E --> F[Embeddings]
+    F --> G[document_embeddings]
 ```
 
-O fluxo desta PR permanece pequeno e linear. Não há orquestração rica, fan-out de fontes nem pipeline expandido. A entrega apenas fecha o primeiro ciclo mínimo necessário para transformar uma fonte legal concreta em base vetorial local utilizável dentro da foundation compartilhada.
+O fluxo permanece linear, explícito e pequeno. O módulo dedicado existe apenas para suportar esse caminho técnico com o mínimo de dependências.
 
 ---
 
 ## 7. Contratos Mínimos
 
-Os contratos públicos devem permanecer simples neste slice. A PR não exige abertura de um contrato genérico de documentos, coleções, conectores ou registries de fonte. O que existir de contrato interno deve ser estritamente o suficiente para representar a origem fixa do conteúdo inicial, o texto particionado a ser vetorizado e os metadados mínimos úteis para persistência e leitura posterior.
-
-O módulo consumidor não deve depender do shape interno de chunk, processo de ingestão ou estratégia de embedding. Toda a modelagem adicional deve permanecer encapsulada em `shared/ai` e limitada ao que é necessário para esta entrega.
-
-Exemplo de metadado mínimo aceitável para este slice:
+Metadados persistidos neste slice:
 
 ```ts
-type KnowledgeChunkSource = {
-  sourceKey: 'codigo-civil-planalto';
-  sourceUrl: 'https://www.planalto.gov.br/ccivil_03/leis/2002/l10406compilada.htm';
-  title: 'Código Civil - Lei nº 10.406/2002';
-};
+type DocumentEmbeddingRecord = {
+  id: string;
+  source: string;
+  content: string;
+  chunkIndex: number;
+}
 ```
+
+Fonte inicial utilizada:
+
+```ts
+source = 'planalto-codigo-civil'
+```
+
+Nenhum contrato público novo foi exposto para consumidores HTTP.
 
 ---
 
 ## 8. Regras de Implementação
 
-A implementação deve favorecer um caminho único, direto e totalmente legível. A fonte inicial deve ser explícita, fixa e revisável. O processo de leitura do conteúdo deve evitar generalização prematura. O particionamento deve ser simples, estável e suficiente apenas para viabilizar embeddings úteis neste primeiro corpus. A persistência vetorial deve registrar o mínimo necessário para permitir reutilização futura sem inflar a modelagem agora.
-
-Não devem ser introduzidos conectores genéricos, hierarquia de loaders, abstrações de source provider, factories para chunking, pipelines universais, jobs sofisticados, retries, versionamento ou mecanismos de sincronização. Também não faz parte deste slice transformar a ingestão em um subdomínio próprio. O foco é apenas validar a primeira base local concreta, com fluxo visível, pequeno e fácil de revisar.
-
-Sempre que houver dúvida entre desenhar uma estrutura expansível ou manter a entrega coesa e proporcional ao problema atual, esta PR deve favorecer a segunda opção.
+- service de ingestão concentra o fluxo principal
+- DAO permanece responsável apenas por persistência e consulta
+- módulo dedicado compõe dependências mínimas do runner
+- sem abstrações prematuras para loaders ou providers de fonte
+- sem preparar scheduler, jobs futuros ou múltiplos conectores
+- implementação direta, visível e revisável
+- `ContentModule` continua focado em consumo funcional HTTP
 
 ---
 
 ## 9. Critérios de Review
 
-- a PR introduz uma primeira base local de conhecimento com fonte concreta, controlada e juridicamente útil
-- o fluxo de ingestão vetorial permanece pequeno, explícito e revisável
-- `shared/ai` continua sendo o owner das capacidades reutilizáveis
-- `modules/content` não recebe complexidade indevida do processo de ingestão
-- a entrega responde a uma necessidade real de corpus local, e não a uma abstração hipotética
-- não houve abertura de pipeline genérico nem foundation paralela
-- a modelagem e a implementação permanecem proporcionais ao slice
-- a PR mantém continuidade arquitetural direta com as PRs 29, 30, 31 e 32
+- a ingestão executa de ponta a ponta com sucesso
+- registros são persistidos com `source` e `chunkIndex`
+- módulo dedicado reduz acoplamento em vez de inflar arquitetura
+- `shared/ai` permanece owner da capacidade técnica
+- `ContentModule` não foi transformado em módulo genérico
+- implementação está proporcional ao slice
+- fluxo principal está claro e fácil de revisar
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] existe uma fonte jurídica inicial fixa usada como primeiro corpus local
-- [ ] o Código Civil compilado no Planalto é lido dentro de um fluxo mínimo e controlado
-- [ ] o conteúdo é particionado no nível necessário para vetorização inicial
-- [ ] embeddings são gerados para os trechos produzidos
-- [ ] os registros são persistidos no banco vetorial previsto na foundation compartilhada
-- [ ] a base local inicial fica disponível para uso posterior no runtime compartilhado
-- [ ] não há expansão indevida para múltiplas fontes ou pipeline genérico
-- [ ] testes e validações existentes continuam passando
+- [ ] runner executa a ingestão sem subir a aplicação HTTP completa
+- [ ] Código Civil é carregado da fonte oficial definida
+- [ ] texto é processado e chunkado
+- [ ] embeddings são gerados no formato esperado
+- [ ] chunks são persistidos em `document_embeddings`
+- [ ] metadados `source` e `chunkIndex` são gravados corretamente
+- [ ] arquitetura principal permanece preservada
+- [ ] testes existentes continuam passando
 
 ---
 
 ## 11. Conclusão
 
-A PR 33 desloca a evolução do projeto de capacidade técnica isolada para utilidade prática mínima. Depois de consolidar a foundation compartilhada e validar a entrada inicial de LangGraph, o próximo passo correto é transformar essa base em algo concretamente útil: uma primeira base local de conhecimento construída sobre o Código Civil, persistida vetorialmente e mantida sob o boundary já aprovado de `shared/ai`.
+A PR 34 transforma a foundation compartilhada em utilidade prática concreta ao introduzir a primeira base jurídica local persistida. A entrega mantém o padrão incremental do projeto: pouco ruído, escopo claro e evolução funcional real.
 
-A entrega permanece pequena, coerente e revisável. Em vez de expandir arquitetura, ela fecha um ciclo funcional real com baixo ruído: fonte concreta, particionamento simples, embedding e persistência vetorial. Isso mantém a sequência das PRs saudável, incremental e orientada a valor técnico real.
+A criação de um módulo separado nesta etapa não expande arquitetura; apenas isola corretamente um processo técnico de ingestão. O resultado é uma base inicial utilizável, construída com simplicidade e aderência ao shape atual do projeto.
+
