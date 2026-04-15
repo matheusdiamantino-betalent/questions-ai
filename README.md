@@ -1,1375 +1,912 @@
-
-# Arquitetura Geral da Plataforma de Geração de Questões com IA
-
-![Status](https://img.shields.io/badge/status-proposta%20arquitetural-2563eb?style=for-the-badge)
-![Stack](https://img.shields.io/badge/stack-NestJS%20%2B%20TypeScript-111827?style=for-the-badge)
-![Arquitetura](https://img.shields.io/badge/arquitetura-mon%C3%B3lito%20modular%20pragm%C3%A1tico-0f766e?style=for-the-badge)
-![Processamento](https://img.shields.io/badge/processamento-ass%C3%ADncrono%20com%20BullMQ-f59e0b?style=for-the-badge)
-![Persistência](https://img.shields.io/badge/dados-Postgres%20%2B%20Redis%20%2B%20MySQL%20ACL-7c3aed?style=for-the-badge)
-![Integrações](https://img.shields.io/badge/integra%C3%A7%C3%B5es-auth%20api%2Fv1%20%2B%20LLM%20%2B%20vetor-ef4444?style=for-the-badge)
-![Observabilidade](https://img.shields.io/badge/observabilidade-logs%20%2B%20m%C3%A9tricas%20%2B%20tracing-059669?style=for-the-badge)
-
-## Tema
-
-**Arquitetura Geral**
-
-## Tipo da Discussão
-
-Proposta arquitetural para validação técnica e definição da base de implementação da plataforma.
-
----
-
-## 1. Resumo Executivo
-
-Esta proposta reposiciona a arquitetura da plataforma de geração de questões com IA conforme o realinhamento técnico definido para o projeto:
-
-- **dispensar OCR no fluxo base**, uma vez que o documento-alvo possui **texto extraível**;
-- **reaproveitar a autenticação já existente da `api/v1` do admin atual**, evitando duplicação de infraestrutura;
-- **adotar um monólito modular em NestJS + TypeScript**, com organização por domínio e camadas pragmáticas por módulo;
-- estruturar cada módulo em **`infra`**, **`model`** e **`lib`**, reservando `shared/` apenas para componentes genuinamente reutilizáveis;
-- aplicar conceitos de **arquitetura hexagonal** e **Clean Architecture** apenas quando agregarem valor real, sem impor abstrações excessivas desde o início.
-
-A intenção é construir uma base arquitetural que seja:
-
-- simples de navegar;
-- fácil de evoluir;
-- clara em termos de responsabilidade;
-- desacoplada o suficiente para crescer com segurança;
-- operacionalmente viável para o estágio atual do projeto.
-
----
-
-## 2. Contexto
-
-A plataforma tem como objetivo transformar provas em PDF em questões estruturadas no formato **Verdadeiro/Falso**, com suporte a:
-
-- extração textual e parsing do conteúdo;
-- classificação temática;
-- resolução taxonômica;
-- busca de base legal e evidências;
-- adaptação semântica do item;
-- validação automatizada;
-- revisão humana quando necessário;
-- publicação controlada na base principal.
-
-A proposta inicial havia partido de uma direção mais próxima de **Clean Architecture** aplicada de forma ampla, somada a OCR como parte do fluxo principal. Após a revisão, a orientação consolidada para o projeto passou a ser mais pragmática:
-
-1. **não usar OCR como etapa base**, pois o cenário atual trabalha com documentos com texto extraível;
-2. **reaproveitar a autenticação do admin atual** via `api/v1`;
-3. estruturar a solução como **monólito modular**, com separação por domínio e camadas internas por módulo;
-4. aplicar conceitos arquiteturais avançados **de forma seletiva**, sem inflar a solução com abstrações desnecessárias.
-
-Esse direcionamento melhora a aderência da arquitetura ao momento do projeto e reduz custo estrutural sem perder qualidade de desenho.
-
----
-
-## 3. Premissas Validadas
-
-As premissas abaixo passam a ser consideradas de base para a arquitetura:
-
-1. O documento de entrada possui **texto extraível**.
-2. O fluxo principal deve operar com **extração textual + parsing**, sem OCR como dependência obrigatória.
-3. OCR poderá existir futuramente apenas como **fallback ou extensão excepcional**, se o contexto de entrada mudar.
-4. A autenticação deverá **reaproveitar o fluxo já existente da `api/v1`** do admin atual.
-5. A plataforma será implementada como **monólito modular**, e não como conjunto de microsserviços.
-6. Os módulos devem possuir organização interna por:
-   - `infra`
-   - `model`
-   - `lib`
-7. `shared/` deve ser usado apenas para componentes realmente reutilizáveis entre múltiplos módulos.
-8. Conceitos de hexagonal e Clean poderão ser adotados **pontualmente**, sem rigidez dogmática.
-
----
-
-## 4. Objetivo
-
-Definir e validar a **arquitetura geral da plataforma**, incluindo:
-
-- estilo arquitetural predominante;
-- organização estrutural do código;
-- decomposição por módulos de domínio;
-- responsabilidades de cada camada interna;
-- relação entre módulos e componentes compartilhados;
-- forma de integração com autenticação existente e legado;
-- desenho do pipeline assíncrono;
-- critérios de escalabilidade, resiliência, observabilidade e evolução futura.
-
----
-
-## 5. Problema Arquitetural
-
-A solução precisa lidar com um fluxo de processamento composto por múltiplas etapas e múltiplas dependências externas:
-
-1. receber PDFs;
-2. validar integridade e metadados;
-3. extrair texto do documento;
-4. interpretar e segmentar questões;
-5. classificar contexto e estrutura do conteúdo;
-6. resolver taxonomia e identificadores canônicos;
-7. buscar base legal e contexto normativo;
-8. adaptar o item para Verdadeiro/Falso;
-9. gerar resposta comentada;
-10. validar qualidade e risco;
-11. encaminhar para revisão humana quando necessário;
-12. publicar de forma controlada no legado;
-13. registrar rastreabilidade ponta a ponta.
-
-Sem um desenho macro claro, surgem riscos relevantes:
-
-- mistura entre lógica de domínio e detalhes de framework;
-- crescimento desordenado de services e helpers;
-- módulos sem ownership claro;
-- acoplamento excessivo entre etapas do pipeline;
-- contaminação do modelo interno pelo legado;
-- pouca governança sobre contratos internos;
-- dificuldade de reprocessamento e troubleshooting;
-- complexidade operacional desnecessária para o estágio atual do projeto.
-
-A pergunta central desta discussão é:
-
-> **como estruturar a plataforma para suportar um pipeline assíncrono, rastreável e evolutivo, sem cair em overengineering nem em acoplamento estrutural prematuro?**
-
----
-
-## 6. Drivers Arquiteturais
-
-### 6.1 Funcionais
-
-- upload e validação de PDF;
-- extração textual e parsing;
-- criação e acompanhamento de jobs;
-- classificação e resolução taxonômica;
-- recuperação de evidências legais;
-- transformação semântica para V/F;
-- validação de qualidade;
-- revisão humana;
-- publicação controlada;
-- retry e reprocessamento por job e por etapa.
-
-### 6.2 Não funcionais
-
-- baixo acoplamento entre módulos;
-- alta coesão por domínio;
-- rastreabilidade por request, job, step e publicação;
-- idempotência em operações críticas;
-- resiliência a falhas parciais de providers;
-- observabilidade end-to-end;
-- segurança por padrão;
-- testabilidade;
-- navegabilidade do código;
-- simplicidade operacional;
-- evolução incremental sem reescrita da base.
-
----
-
-## 7. Decisões Arquiteturais Explícitas
-
-### 7.1 Fluxo base sem OCR
-
-A arquitetura passa a assumir **extração textual e parsing direto** como caminho principal.
-
-#### Implicações
-
-- reduz complexidade operacional;
-- reduz custo técnico;
-- remove uma dependência desnecessária do caminho crítico;
-- simplifica debug, testes e observabilidade;
-- deixa a extração mais aderente ao cenário atual.
-
-#### Diretriz
-
-OCR não compõe o pipeline principal nesta fase. Caso seja necessário no futuro, deve entrar como **capacidade opcional**, isolada e com justificativa própria.
-
----
-
-### 7.2 Reaproveitamento da autenticação da `api/v1`
-
-A autenticação da plataforma não deve reinventar o fluxo já existente no admin.
-
-#### Diretriz
-
-- validação de identidade e autorização deve reaproveitar a autenticação disponível na `api/v1`;
-- o módulo `auth` da nova plataforma deve funcionar como **camada de integração e adaptação**, e não como sistema de identidade paralelo;
-- a plataforma deve manter consistência com a infraestrutura já utilizada.
-
-#### Benefícios
-
-- menor esforço de implementação;
-- menor dispersão arquitetural;
-- menor duplicação de regras;
-- maior consistência operacional.
-
----
-
-### 7.3 Monólito modular como base
-
-A plataforma será organizada como **um único deployment unit principal**, com separação interna por módulos de domínio.
-
-#### Diretriz
-
-- um serviço principal em NestJS + TypeScript;
-- módulos especializados por capacidade;
-- filas e workers desacoplando etapas do pipeline;
-- módulos com responsabilidades explícitas;
-- shared restrito a componentes realmente transversais.
-
-#### Benefícios
-
-- simplicidade operacional;
-- menor custo inicial de plataforma;
-- melhor navegabilidade;
-- facilidade de tracing;
-- evolução incremental mais controlada.
-
----
-
-### 7.4 Camadas por módulo: `infra`, `model` e `lib`
-
-Cada módulo deverá seguir uma organização interna simples e consistente.
-
-#### `modules/<modulo>/model`
-
-Responsável por definir **forma, estrutura e contrato interno** do módulo:
-
-- DTOs;
-- enums;
-- types;
-- interfaces;
-- schemas;
-- validações;
-- contratos internos entre camadas.
-
-#### `modules/<modulo>/infra`
-
-Responsável por implementação concreta e pontos de entrada/saída:
-
-- controllers;
-- services;
-- processors;
-- gateways;
-- repositories;
-- clients;
-- adapters;
-- integrações externas.
-
-#### `modules/<modulo>/lib`
-
-Responsável por código de apoio específico do domínio:
-
-- helpers;
-- parsers;
-- mapeadores;
-- normalizadores;
-- formatadores;
-- factories;
-- utilitários do módulo.
-
----
-
-### 7.5 Shared com uso disciplinado
-
-A camada `shared/` deve existir, mas com restrição de uso.
-
-#### Diretriz
-
-Somente entram em `shared/` elementos que sejam:
-
-- reutilizados por múltiplos módulos;
-- estáveis o suficiente para serem compartilhados;
-- verdadeiramente transversais.
-
-#### Exemplos válidos
-
-- tipos globais;
-- contratos compartilhados;
-- middlewares reutilizáveis;
-- clients compartilháveis;
-- utilitários genéricos;
-- validações comuns;
-- telemetria transversal.
-
-#### Exemplo inválido
-
-Mover para `shared/` qualquer helper ou mapper apenas para “organizar melhor” quando ele pertence a um único domínio.
-
----
-
-## 8. Stack Arquitetural Base
-
-### Runtime e linguagem
-
-- **NestJS**
-- **TypeScript**
-
-### Processamento
-
-- **BullMQ** para filas e workers;
-- processamento orientado a jobs e steps;
-- execução assíncrona por etapa.
-
-### Persistência e coordenação
-
-- **PostgreSQL** para estado operacional e rastreabilidade;
-- **Redis** para coordenação, locks, idempotência e apoio às filas;
-- **MySQL** apenas via ACL para publicação na base principal.
-
-### Integrações externas
-
-- autenticação existente da `api/v1`;
-- provider LLM;
-- storage de objetos;
-- busca vetorial / embeddings;
-- serviços auxiliares de catálogo e taxonomia;
-- publicação via ACL.
-
-### Observabilidade
-
-- logs estruturados;
-- métricas;
-- tracing;
-- health endpoints;
-- DLQ e trilhas de falha.
-
----
-
-## 9. Terminologia
-
-- **Módulo**: bounded context técnico implementado como módulo NestJS.
-- **Model**: camada de contrato e estrutura de dados do módulo.
-- **Infra**: camada de execução e integração do módulo.
-- **Lib**: camada de apoio específica do módulo.
-- **Shared**: recursos transversais reutilizáveis entre módulos.
-- **Job**: unidade macro de processamento.
-- **Step**: etapa rastreável do job.
-- **ACL**: anti-corruption layer entre a plataforma e a base principal.
-- **Auth existente**: autenticação reaproveitada da `api/v1` do admin atual.
-
----
-
-## 10. Escopo desta Issue
-
-Esta discussão cobre:
-
-- arquitetura macro da plataforma;
-- organização por módulos e camadas;
-- desenho estrutural do pipeline;
-- critérios de integração entre módulos;
-- reaproveitamento da autenticação existente;
-- posicionamento da ACL;
-- estratégia geral de escalabilidade, resiliência e observabilidade;
-- tree view arquitetural da solução.
-
----
-
-## 11. Fora de Escopo
-
-Esta issue não fecha em detalhe:
-
-- modelo físico final de banco;
-- payloads completos da API;
-- regras detalhadas de prompt engineering;
-- detalhamento fino de revisão humana;
-- taxonomia pedagógica final;
-- política final de dashboards e alertas;
-- tuning específico de LLM;
-- regras definitivas de priorização de filas.
-
----
-
-## 12. Opções Arquiteturais Avaliadas
-
-### Opção A — Monólito Modular Pragmático por Domínio e Camadas por Módulo
-
-**Conceito**
-
-Um único serviço principal em NestJS + TypeScript, organizado por módulos de domínio, com estrutura interna em `infra`, `model` e `lib`, usando filas para desacoplar etapas do pipeline e reaproveitando a autenticação existente.
-
-#### Vantagens
-
-- melhor aderência ao momento do projeto;
-- menor overhead operacional;
-- boa clareza de ownership;
-- fácil navegação da base;
-- baixo custo inicial de coordenação;
-- compatível com crescimento incremental;
-- boa combinação entre simplicidade e separação de responsabilidades.
-
-#### Desvantagens
-
-- exige disciplina para preservar boundaries;
-- risco de crescimento excessivo do monólito se módulos não forem respeitados;
-- requer revisão criteriosa para evitar que `shared` vire dumping ground.
-
-#### Avaliação
-
-**Recomendada**.
-
----
-
-### Opção B — Monólito com Clean Architecture aplicada de forma rígida
-
-**Conceito**
-
-Manter um monólito, mas impor separações mais densas por `interfaces`, `application`, `domain`, `infrastructure`, contratos detalhados e abstrações extensivas desde a primeira versão.
-
-#### Vantagens
-
-- forte formalização estrutural;
-- alto potencial de isolamento entre regras e detalhes técnicos;
-- excelente base para times já acostumados ao padrão.
-
-#### Desvantagens
-
-- maior carga de abstração no início;
-- aumento de boilerplate;
-- maior custo cognitivo;
-- risco de formalismo excessivo para o estágio atual do projeto.
-
-#### Avaliação
-
-Arquiteturalmente válida, porém **mais sofisticada do que o necessário neste momento**.
-
----
-
-### Opção C — Microsserviços por etapa do pipeline
-
-**Conceito**
-
-Separar ingestion, extraction, classification, resolution, retrieval, transformation, quality, review e publication em serviços independentes desde o início.
-
-#### Vantagens
-
-- escalabilidade técnica independente por serviço;
-- isolamento de falhas mais forte;
-- separação de deployment mais explícita.
-
-#### Desvantagens
-
-- overhead operacional elevado;
-- maior custo de tracing, retries, contratos e observabilidade;
-- maior complexidade para um domínio ainda em consolidação;
-- mais latência, mais pontos de falha e mais custo de operação.
-
-#### Avaliação
-
-Válida em outro estágio de maturidade, mas **prematura para o momento atual**.
-
----
-
-## 13. Comparação das Opções
-
-| Critério | Opção A — Monólito Modular Pragmático | Opção B — Monólito com Clean Rígida | Opção C — Microsserviços |
-| --- | --- | --- | --- |
-| Simplicidade operacional | Alta | Média | Baixa |
-| Aderência ao contexto atual | Alta | Média | Baixa |
-| Clareza de ownership | Alta | Alta | Alta |
-| Custo cognitivo inicial | Baixo | Alto | Alto |
-| Escalabilidade evolutiva | Alta | Alta | Alta |
-| Overengineering inicial | Baixo | Médio/Alto | Alto |
-| Aderência ao direcionamento | Alta | Média | Baixa |
-| Facilidade de navegação | Alta | Média | Média |
-| Tempo de implementação | Melhor | Médio | Pior |
-
----
-
-## 14. Direção Arquitetural Recomendada
-
-A direção mais coerente com o cenário atual é a **Opção A — Monólito Modular Pragmático por Domínio**, com:
-
-- **NestJS + TypeScript** como stack principal;
-- **módulos por domínio**;
-- organização interna em **`infra`**, **`model`** e **`lib`**;
-- **BullMQ** para pipeline assíncrono;
-- **PostgreSQL** como base operacional;
-- **Redis** como apoio operacional;
-- **ACL** para publicação no legado;
-- **reaproveitamento da auth da `api/v1`**;
-- uso **pontual** de princípios de Clean e hexagonal.
-
-Essa direção oferece o melhor equilíbrio entre:
-
-- robustez;
-- clareza;
-- baixo acoplamento;
-- simplicidade de manutenção;
-- alinhamento com o estágio do projeto.
-
----
-
-## 15. Princípios Arquiteturais
-
-1. **Organização por domínio**
-   Cada módulo deve representar uma capacidade clara da plataforma.
-
-2. **Camadas internas simples e consistentes**
-   Todo módulo deve seguir `infra`, `model` e `lib`.
-
-3. **Baixo acoplamento entre módulos**
-   Dependências devem ser explícitas e controladas.
-
-4. **Shared apenas para transversalidade real**
-   Reuso não deve virar centralização indevida.
-
-5. **Pipeline assíncrono com estado persistido**
-   O sistema deve operar por jobs e steps rastreáveis.
-
-6. **Integrações externas encapsuladas**
-   Providers e gateways devem ficar na camada `infra`.
-
-7. **Legado sempre atrás de ACL**
-   O modelo interno não deve falar a semântica do legado.
-
-8. **Segurança, observabilidade e resiliência são estruturais**
-   Não são etapas posteriores de refinamento.
-
-9. **Pragmatismo acima de dogma**
-   Conceitos arquiteturais só devem ser aplicados quando gerarem ganho real.
-
----
-
-## 16. Visão Arquitetural Consolidada
-
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#0b1220',
-    'primaryColor': '#111827',
-    'primaryTextColor': '#e5e7eb',
-    'primaryBorderColor': '#38bdf8',
-    'secondaryColor': '#0f172a',
-    'secondaryTextColor': '#e5e7eb',
-    'tertiaryColor': '#111827',
-    'tertiaryTextColor': '#e5e7eb',
-    'lineColor': '#94a3b8'
-  }
-}}%%
-flowchart TB
-    user["Usuário / Operador"]
-    reviewer["Revisor Humano"]
-    adminauth["Auth existente<br/>api/v1 Admin"]
-    storage["Object Storage"]
-    llm["Provider LLM"]
-    vector["Vector Search / Embeddings"]
-    legacy["Base principal MySQL<br/>via ACL"]
-    postgres["PostgreSQL"]
-    redis["Redis + BullMQ"]
-
-    subgraph platform["Plataforma Principal — NestJS + TypeScript"]
-        entry["Entrypoints<br/>HTTP • Queue • Health"]
-        shared["Shared<br/>infra • model • lib"]
-        processing["Processing Module<br/>coordenação de job e step"]
-        domains["Módulos de domínio<br/>ingestion • extraction • classification<br/>resolution • retrieval • transformation<br/>quality • review • publication • audit"]
-    end
-
-    user --> entry
-    reviewer --> entry
-    entry --> adminauth
-    entry --> processing
-    entry --> domains
-    processing --> domains
-    domains --> shared
-    domains --> storage
-    domains --> llm
-    domains --> vector
-    domains --> legacy
-    domains --> postgres
-    processing --> postgres
-    processing --> redis
-    domains --> redis
-
-    classDef actor fill:#111827,stroke:#f59e0b,color:#f8fafc,stroke-width:2px;
-    classDef core fill:#0f172a,stroke:#38bdf8,color:#e5e7eb,stroke-width:2px;
-    classDef module fill:#111827,stroke:#22c55e,color:#ecfccb,stroke-width:2px;
-    classDef ext fill:#111827,stroke:#a78bfa,color:#ede9fe,stroke-width:2px;
-    classDef data fill:#111827,stroke:#fb7185,color:#ffe4e6,stroke-width:2px;
-
-    class user,reviewer actor;
-    class entry,processing core;
-    class domains,shared module;
-    class adminauth,storage,llm,vector,legacy ext;
-    class postgres,redis data;
+# DLS IA
+
+Sistema inteligente para geração automatizada de questões de concurso no formato verdadeiro/falso, com gabaritos comentados.
+
+## Visão Geral
+
+O DLS IA é uma **plataforma de IA baseada em agents** com uma base de conhecimento vetorial compartilhada. Diferentes agents especializados consomem essa base para executar tarefas específicas.
+
+### Arquitetura Multi-Agent
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           BASE DE CONHECIMENTO VETORIAL                 │
+│  (PostgreSQL + PGVector)                                │
+│  - Legislação completa (leis, artigos, resoluções)      │
+│  - Materiais didáticos (livros, apostilas, doutrina)    │
+│  - Embeddings semânticos                                │
+│  - Busca por similaridade                               │
+└────────────────────┬────────────────────────────────────┘
+                     │
+          ┌──────────┴──────────┐
+          │  Consumido por      │
+          └──────────┬──────────┘
+                     ↓
+   ┌─────────────────────────────────────────────────┐
+   │              AGENTS ESPECIALIZADOS              │
+   ├─────────────────────────────────────────────────┤
+   │                                                 │
+   │ Agent Gerador de Questões V/F (v1)             │
+   │    - Transforma múltipla escolha em V/F        │
+   │    - Gera gabaritos comentados                 │
+   │                                                 │
+   │ Agent Chatbot (futuro)                         │
+   │    - Responde dúvidas sobre legislação         │
+   │    - Contextual com base vetorial              │
+   │                                                 │
+   │ Agent Gerador de Questões Inéditas (futuro)   │
+   │    - Cria questões originais                   │
+   │    - Baseado em temas da legislação            │
+   │                                                 │
+   │ Agent de Marketing (futuro)                    │
+   │    - Gera conteúdo para redes sociais          │
+   │    - Posts educativos sobre leis               │
+   │                                                 │
+   │ Agent de Material Didático (futuro)            │
+   │    - Mapas mentais de leis                     │
+   │    - PDFs com resumos estruturados             │
+   │    - Flashcards e diagramas                    │
+   │                                                 │
+   │ Outros agents (futuro)                         │
+   │    - Analisador de mudanças legislativas       │
+   │    - Comparação de versões de leis             │
+   │    - Alertas de atualizações                   │
+   │                                                 │
+   └─────────────────────────────────────────────────┘
 ```
 
-### Leitura do diagrama
+### Componentes Principais
 
-- a plataforma é **um único serviço principal**;
-- autenticação externa é **reaproveitada**, não recriada;
-- `processing` coordena job e step, mas não substitui os módulos de domínio;
-- módulos especializados executam capacidades específicas;
-- integrações externas ficam nas bordas;
-- estado operacional é persistido em Postgres e coordenado com Redis/BullMQ.
+**1. Base de Conhecimento (Core)**
 
----
+- Banco vetorial com toda legislação
+- Sistema de embeddings e busca semântica
+- APIs de consulta compartilhadas
 
-## 17. Visão Interna do Módulo
+**2. Agents (Plugáveis)**
 
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#0b1220',
-    'primaryColor': '#111827',
-    'primaryTextColor': '#e5e7eb',
-    'primaryBorderColor': '#38bdf8',
-    'secondaryColor': '#0f172a',
-    'secondaryTextColor': '#e5e7eb',
-    'tertiaryColor': '#111827',
-    'tertiaryTextColor': '#e5e7eb',
-    'lineColor': '#94a3b8'
-  }
-}}%%
-flowchart TB
-    subgraph module["modules/<modulo>"]
-        model["model<br/>DTOs • enums • interfaces • schemas • validações"]
-        infra["infra<br/>controllers • services • processors • gateways • repositories"]
-        lib["lib<br/>helpers • parsers • mappers • formatadores • factories"]
-    end
+- Cada agent é um módulo independente
+- Todos consomem a mesma base de conhecimento
+- Fácil adicionar novos agents sem afetar existentes
 
-    infra --> model
-    infra --> lib
-    lib --> model
+**3. Integração MySQL**
 
-    classDef modelc fill:#111827,stroke:#22c55e,color:#ecfccb,stroke-width:2px;
-    classDef infrac fill:#0f172a,stroke:#38bdf8,color:#e5e7eb,stroke-width:2px;
-    classDef libc fill:#111827,stroke:#f59e0b,color:#fef3c7,stroke-width:2px;
+- Consulta IDs do serviço principal
+- Grava questões processadas e rascunhos
+- Cache local para performance
 
-    class model modelc;
-    class infra infrac;
-    class lib libc;
+## Importante: Separação de Responsabilidades
+
+**Este microserviço NÃO armazena questões finais.**
+
+### O que é gerenciado pelo Serviço Principal (MySQL):
+
+- **Questões aprovadas e publicadas**
+- Cadastros base: Bancas, Leis, Artigos, Órgãos, Anos
+- Usuários e permissões
+- Validação e aprovação de questões
+- Interface administrativa
+
+### O que é gerenciado por este Microserviço:
+
+**PostgreSQL + PGVector:**
+
+- Base de conhecimento vetorial (legislação)
+- Materiais didáticos uploadados (livros, apostilas, doutrina)
+- Logs de processamento dos agents
+
+**Redis:**
+
+- Cache de IDs do serviço principal (para performance)
+- Métricas e monitoramento de IA
+- Filas de jobs (Bull/BullMQ) para processamento assíncrono
+
+**Fluxo:** Microserviço processa e retorna questões → Serviço Principal valida e armazena no MySQL.
+
+## Objetivo
+
+Receber PDFs de provas e gabaritos como entrada e gerar automaticamente questões adaptadas ao formato DLS:
+
+**Entrada:**
+
+- PDF da prova (questões de múltipla escolha no formato original)
+- PDF/documento do gabarito (que pode ou não estar comentado)
+
+**Processamento:**
+
+- Extração e parsing dos PDFs
+- Identificação de questões e alternativas
+- Transformação para formato verdadeiro/falso
+- Geração de gabaritos comentados
+
+**Saída:**
+
+- Enunciados reformulados para formato verdadeiro/falso
+- Gabaritos comentados explicativos
+- Questões classificadas e catalogadas
+
+### Formato das Questões
+
+#### Estrutura do Enunciado
+
+```
+[Art. x, Código ou Lei] BANCA ANO - Cargo/Concurso (Órgão)
 ```
 
-### Interpretação
+**Exemplo:**
 
-- `model` define a forma e as regras do dado;
-- `infra` executa, integra, orquestra e expõe entradas;
-- `lib` apoia o domínio do módulo com código auxiliar específico;
-- `infra` pode usar `model` e `lib`;
-- `lib` pode usar `model`;
-- `model` não depende de `infra`.
-
----
-
-## 18. Fluxo Arquitetural do Pipeline
-
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#0b1220',
-    'primaryColor': '#111827',
-    'primaryTextColor': '#e5e7eb',
-    'primaryBorderColor': '#38bdf8',
-    'secondaryColor': '#0f172a',
-    'secondaryTextColor': '#e5e7eb',
-    'tertiaryColor': '#111827',
-    'tertiaryTextColor': '#e5e7eb',
-    'lineColor': '#94a3b8'
-  }
-}}%%
-flowchart TB
-    start["Upload do PDF"]
-    ingestion["Ingestion<br/>validação • storage • metadados"]
-    job["Processing<br/>criação do job e step tracking"]
-    extraction["Extraction<br/>texto extraível + parsing"]
-    classification["Classification<br/>classificação temática"]
-    resolution["Resolution<br/>resolução taxonômica"]
-    retrieval["Knowledge Retrieval<br/>evidências legais e busca vetorial"]
-    transformation["Transformation<br/>adaptação V/F e gabarito comentado"]
-    quality["Quality<br/>score • risco • consistência"]
-    needreview{"Revisão humana necessária?"}
-    review["Review<br/>fila e decisão humana"]
-    publication["Publication<br/>ACL + publicação controlada"]
-    done["Concluído"]
-    retry["Retry / reprocessamento"]
-    dlq["DLQ / falha irreversível"]
-
-    start --> ingestion --> job --> extraction --> classification --> resolution --> retrieval --> transformation --> quality --> needreview
-    needreview -- "Sim" --> review --> publication --> done
-    needreview -- "Não" --> publication --> done
-
-    extraction -. falha recuperável .-> retry
-    classification -. falha recuperável .-> retry
-    resolution -. falha recuperável .-> retry
-    retrieval -. falha recuperável .-> retry
-    transformation -. falha recuperável .-> retry
-    quality -. falha recuperável .-> retry
-    publication -. falha irreversível .-> dlq
-
-    classDef step fill:#111827,stroke:#38bdf8,color:#e2e8f0,stroke-width:2px;
-    classDef decision fill:#111827,stroke:#f59e0b,color:#fef3c7,stroke-width:2px;
-    classDef terminal fill:#111827,stroke:#22c55e,color:#ecfccb,stroke-width:2px;
-    classDef failure fill:#111827,stroke:#fb7185,color:#ffe4e6,stroke-width:2px;
-
-    class start,done terminal;
-    class ingestion,job,extraction,classification,resolution,retrieval,transformation,quality,review,publication step;
-    class needreview decision;
-    class retry,dlq failure;
+```
+[Art. 1º, Lei 9.492/97] IESES 2026 - Tabelião / Oficial de Registros - Provimento (TJ-PA)
 ```
 
-### Observação importante
+#### Exemplo de Transformação
 
-O pipeline não deve ser implementado como encadeamento síncrono rígido entre módulos. Ele deve operar com:
+**Entrada (Questão Original):**
 
-- steps persistidos;
-- filas desacoplando etapas;
-- política explícita de retry;
-- capacidade de reprocessamento por job e por etapa.
+```
+QUESTÃO 01. Conforme a resolução 583 do CNJ é correto afirmar:
+a) Na hipótese de declaração de inexistência de pacto antenupcial...
+b) Conforme a resolução 583 para fins de referida averbação...
+c) A declaração complementar deverá ser registrada...
+d) Faculta-se a averbação do regime de bens posteriormente...
+e) É obrigatória a averbação do regime de bens posteriormente...
 
----
-
-## 19. Diagrama de Dependências Permitidas
-
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#0b1220',
-    'primaryColor': '#111827',
-    'primaryTextColor': '#e5e7eb',
-    'primaryBorderColor': '#38bdf8',
-    'secondaryColor': '#0f172a',
-    'secondaryTextColor': '#e5e7eb',
-    'tertiaryColor': '#111827',
-    'tertiaryTextColor': '#e5e7eb',
-    'lineColor': '#94a3b8'
-  }
-}}%%
-flowchart LR
-    moduleinfra["modules/<modulo>/infra"]
-    modulemodel["modules/<modulo>/model"]
-    modulelib["modules/<modulo>/lib"]
-    sharedinfra["shared/infra"]
-    sharedmodel["shared/model"]
-    sharedlib["shared/lib"]
-    externals["Sistemas externos"]
-
-    moduleinfra --> modulemodel
-    moduleinfra --> modulelib
-    moduleinfra --> sharedinfra
-    moduleinfra --> sharedmodel
-    moduleinfra --> sharedlib
-    moduleinfra --> externals
-
-    modulelib --> modulemodel
-    modulelib --> sharedmodel
-    modulelib --> sharedlib
-
-    sharedinfra --> sharedmodel
-    sharedinfra --> sharedlib
-    sharedlib --> sharedmodel
-
-    classDef core fill:#0f172a,stroke:#38bdf8,color:#e5e7eb,stroke-width:2px;
-    classDef support fill:#111827,stroke:#22c55e,color:#ecfccb,stroke-width:2px;
-    classDef ext fill:#111827,stroke:#a78bfa,color:#ede9fe,stroke-width:2px;
-
-    class moduleinfra,modulemodel,modulelib core;
-    class sharedinfra,sharedmodel,sharedlib support;
-    class externals ext;
+Comentários: [Gabarito detalhado com fundamentação legal]
 ```
 
-### Regras derivadas
+**Saída (Questão Formato DLS):**
 
-- `model` não conhece infraestrutura;
-- `lib` não chama sistemas externos;
-- integrações externas entram apenas via `infra`;
-- `shared` não substitui domínio nem ownership de módulo;
-- compartilhamento só é permitido quando for transversal e estável.
+```
+QUESTÃO 01
 
----
+[Art. 1º, Lei 6.015/73] IESES 2026 - Tabelião / Oficial de Registros - Provimento (TJ-PA)
 
-## 20. Diagrama de Publicação via ACL
+Os serviços concernentes aos Registros Públicos, estabelecidos pela legislação civil,
+destinam-se a garantir a publicidade, autenticidade, segurança e eficácia dos atos jurídicos.
 
-```mermaid
-%%{init: {
-  'theme': 'base',
-  'themeVariables': {
-    'background': '#0b1220',
-    'primaryColor': '#111827',
-    'primaryTextColor': '#e5e7eb',
-    'primaryBorderColor': '#38bdf8',
-    'secondaryColor': '#0f172a',
-    'secondaryTextColor': '#e5e7eb',
-    'tertiaryColor': '#111827',
-    'tertiaryTextColor': '#e5e7eb',
-    'lineColor': '#94a3b8'
-  }
-}}%%
-flowchart LR
-    draft["Draft validado"]
-    publication["publication/infra<br/>service de publicação"]
-    canonical["payload canônico interno"]
-    acl["ACL Adapter<br/>tradução para legado"]
-    legacy["MySQL principal"]
-    audit["audit + publication events"]
+( ) Verdadeiro
+( ) Falso
 
-    draft --> publication --> canonical --> acl --> legacy
-    publication --> audit
-    acl --> audit
+Gabarito: Verdadeiro
 
-    classDef core fill:#0f172a,stroke:#38bdf8,color:#e5e7eb,stroke-width:2px;
-    classDef stage fill:#111827,stroke:#22c55e,color:#ecfccb,stroke-width:2px;
-    classDef ext fill:#111827,stroke:#a78bfa,color:#ede9fe,stroke-width:2px;
-
-    class draft,canonical stage;
-    class publication,acl core;
-    class legacy,audit ext;
+Art. 1º Os serviços concernentes aos Registros Públicos, estabelecidos pela legislação
+civil para autenticidade, segurança e eficácia dos atos jurídicos, ficam sujeitos ao
+regime estabelecido nesta Lei. (Lei 6.015/73)
 ```
 
-### Diretriz
+## Arquitetura do Sistema
 
-O domínio publica **intenção e payload canônico**. A ACL traduz esse payload para o modelo da base principal. O legado não deve ditar a semântica interna da plataforma.
+### 1. Base de Conhecimento Compartilhada
+
+**Banco Vetorial (PostgreSQL + PGVector)**
+
+Repositório central de conhecimento legal acessível por todos os agents:
+
+- **Legislação completa**: Leis, decretos, resoluções, portarias
+  - Estrutura granular: Artigos, parágrafos, incisos, alíneas
+  - Metadados ricos: Tipo, número, data, órgão, status
+- **Materiais Didáticos**: Livros, apostilas, doutrina, artigos
+  - Upload via API de PDFs
+  - Processamento automático e chunking inteligente
+  - Busca semântica integrada
+- **Embeddings semânticos**: Busca por similaridade de contexto em toda a base
+
+**APIs de Acesso à Base:**
+
+```typescript
+// Busca semântica
+buscarArtigo(query: string, k: number): Artigo[]
+
+// Busca por similaridade
+buscarSimilares(embedding: number[], threshold: number): Artigo[]
+
+// Busca específica
+buscarPorReferencia(lei: string, artigo: string): Artigo
+
+// Contexto expandido
+obterContextoArtigo(artigoId: string): ContextoLegal
+```
+
+### 2. Sistema de Agents Plugáveis
+
+Arquitetura modular onde cada agent é independente e especializado:
+
+#### Agent 1: Gerador de Questões V/F (v1.0)
+
+**Objetivo**: Transformar questões de múltipla escolha em verdadeiro/falso
+
+**Sub-agents**:
+
+#### Agent de Busca de Informações Legais
+
+- **Responsabilidade**: Consultar e validar informações de leis e normas
+- **Fontes**:
+  - Base local (banco vetorial)
+  - Internet (apenas fontes oficiais, como site do Planalto)
+- **Função**: Garantir precisão jurídica das questões
+
+#### Agent de Adaptação de Enunciado
+
+- **Responsabilidade**: Transformar enunciados originais para o formato DLS
+- **Entrada**: Alternativa correta da questão de múltipla escolha
+- **Saída**: Afirmação única em formato verdadeiro/falso
+- **Função**:
+  - Extrair conteúdo da alternativa correta
+  - Reformular como afirmação objetiva
+  - Manter rigor técnico e precisão jurídica
+  - Garantir clareza e concisão
+
+#### Agent de Geração de Gabarito Comentado
+
+- **Responsabilidade**: Extrair e formatar a fundamentação legal
+- **Entrada**: Comentários da questão original
+- **Saída**: Gabarito estruturado com:
+  - Resposta (Verdadeiro/Falso)
+  - Texto completo do artigo/lei citado
+  - Referência legal (Lei, Resolução, etc.)
+- **Função**:
+  - Identificar fundamentação legal nos comentários
+  - Buscar texto completo dos artigos citados
+  - Validar informações em fontes oficiais
+
+#### Agent de Classificação
+
+- **Responsabilidade**: Extrair e categorizar metadados da questão
+- **Atribuições**:
+  - Identificar artigo/parágrafo cobrado
+  - Extrair lei/código/resolução
+  - Identificar banca organizadora
+  - Ano do concurso
+  - Cargo/concurso
+  - Órgão
+- **Função**:
+  - Parser do título/cabeçalho da questão
+  - Classificação baseada no banco de dados
+  - Normalização de metadados
+
+#### Agent 2: Chatbot de Legislação (futuro)
+
+**Objetivo**: Responder perguntas sobre legislação em linguagem natural
+
+**Funcionalidades**:
+
+- Interpretação de perguntas em português
+- Busca semântica na base vetorial
+- Respostas contextualizadas com citações legais
+- Histórico de conversação
+
+**Casos de uso**:
+
+- "O que diz a lei sobre registros públicos?"
+- "Qual a diferença entre o Art. 1º e o Art. 2º da Lei 6.015/73?"
+- "Como funciona o regime de bens no casamento?"
 
 ---
 
-## 21. Responsabilidade dos Módulos
+#### Agent 3: Gerador de Questões Inéditas (futuro)
 
-### `auth`
-Integração e adaptação da autenticação já existente da `api/v1`.
+**Objetivo**: Criar questões originais baseadas na legislação
 
-### `ingestion`
-Validação do arquivo, metadados, persistência inicial e armazenamento.
+**Funcionalidades**:
 
-### `processing`
-Gestão de jobs, steps, retries, reprocessamento e coordenação do pipeline.
+- Analisar artigos da base vetorial
+- Gerar questões didáticas inéditas
+- Múltiplos formatos (V/F, múltipla escolha, dissertativa)
+- Controle de dificuldade
 
-### `extraction`
-Extração textual e parsing das questões a partir do PDF.
+**Casos de uso**:
 
-### `classification`
-Classificação temática, estrutural e contextual do conteúdo.
-
-### `resolution`
-Mapeamento para taxonomia, matérias, submatérias e identificadores canônicos.
-
-### `knowledge-retrieval`
-Busca de contexto legal, evidências e recuperação semântica.
-
-### `transformation`
-Conversão do item para Verdadeiro/Falso e geração de comentário.
-
-### `quality`
-Validação de qualidade, score, consistência e sinalização de risco.
-
-### `review`
-Fila humana, claim, decisão, ajuste e aprovação.
-
-### `publication`
-Publicação controlada via ACL.
-
-### `audit`
-Registro de eventos críticos e trilhas relevantes.
-
-### `health`
-Exposição de saúde operacional da plataforma.
-
-### `observability`
-Telemetria, correlação, métricas, tracing e apoio diagnóstico.
-
-### `governance`
-Políticas, contratos operacionais, convenções e evolução controlada do pipeline.
+- Gerar 10 questões fáceis sobre Lei de Registros Públicos
+- Criar questões avançadas sobre regime de bens
+- Gerar simulado completo sobre legislação notarial
 
 ---
 
-## 22. Tree View Arquitetural Proposta
+#### Agent 4: Gerador de Conteúdo para Marketing (futuro)
 
-```text
-src/
-├── main.ts
-├── app.module.ts
-├── bootstrap/
-│   ├── app.bootstrap.ts
-│   ├── config.bootstrap.ts
-│   ├── logger.bootstrap.ts
-│   ├── validation.bootstrap.ts
-│   ├── exception-filters.bootstrap.ts
-│   ├── metrics.bootstrap.ts
-│   ├── tracing.bootstrap.ts
-│   ├── queues.bootstrap.ts
-│   ├── swagger.bootstrap.ts
-│   └── shutdown.bootstrap.ts
-├── config/
-│   ├── app.config.ts
-│   ├── auth.config.ts
-│   ├── db.config.ts
-│   ├── redis.config.ts
-│   ├── queue.config.ts
-│   ├── storage.config.ts
-│   ├── llm.config.ts
-│   ├── vector.config.ts
-│   ├── observability.config.ts
-│   ├── security.config.ts
-│   ├── feature-flags.config.ts
-│   └── review-policy.config.ts
-├── modules/
-│   ├── auth/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── gateways/
-│   │   │   └── clients/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── normalizers/
-│   ├── ingestion/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── gateways/
-│   │   │   ├── repositories/
-│   │   │   └── clients/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       ├── parsers/
-│   │       └── normalizers/
-│   ├── processing/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── factories/
-│   ├── extraction/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── parsers/
-│   │       ├── mappers/
-│   │       ├── helpers/
-│   │       └── normalizers/
-│   ├── classification/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── normalizers/
-│   ├── resolution/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── normalizers/
-│   ├── knowledge-retrieval/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── gateways/
-│   │   │   └── clients/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       ├── normalizers/
-│   │       └── formatters/
-│   ├── transformation/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       ├── formatters/
-│   │       └── factories/
-│   ├── quality/
-│   │   ├── infra/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── scorers/
-│   ├── review/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── normalizers/
-│   ├── publication/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── processors/
-│   │   │   ├── services/
-│   │   │   ├── gateways/
-│   │   │   ├── repositories/
-│   │   │   └── acl/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── formatters/
-│   ├── audit/
-│   │   ├── infra/
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── formatters/
-│   ├── observability/
-│   │   ├── infra/
-│   │   │   ├── services/
-│   │   │   ├── gateways/
-│   │   │   └── providers/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   └── interfaces/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       └── mappers/
-│   ├── governance/
-│   │   ├── infra/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   └── gateways/
-│   │   ├── model/
-│   │   │   ├── dto/
-│   │   │   ├── enums/
-│   │   │   ├── interfaces/
-│   │   │   ├── schemas/
-│   │   │   └── validators/
-│   │   └── lib/
-│   │       ├── helpers/
-│   │       ├── mappers/
-│   │       └── factories/
-│   └── health/
-│       ├── infra/
-│       │   ├── controllers/
-│       │   └── services/
-│       ├── model/
-│       │   ├── dto/
-│       │   └── interfaces/
-│       └── lib/
-│           └── helpers/
-├── shared/
-│   ├── infra/
-│   │   ├── clients/
-│   │   ├── providers/
-│   │   ├── middlewares/
-│   │   ├── guards/
-│   │   ├── interceptors/
-│   │   ├── filters/
-│   │   └── telemetry/
-│   ├── model/
-│   │   ├── dto/
-│   │   ├── enums/
-│   │   ├── interfaces/
-│   │   ├── schemas/
-│   │   ├── validators/
-│   │   └── constants/
-│   └── lib/
-│       ├── helpers/
-│       ├── utils/
-│       ├── mappers/
-│       ├── normalizers/
-│       ├── parsers/
-│       └── formatters/
-├── docs/
-│   ├── architecture/
-│   ├── adr/
-│   ├── contracts/
-│   └── runbooks/
-└── test/
-    ├── fixtures/
-    ├── factories/
-    ├── unit/
-    ├── integration/
-    ├── contract/
-    ├── e2e/
-    ├── resilience/
-    └── load/
+**Objetivo**: Criar conteúdo educativo para redes sociais e marketing
+
+**Funcionalidades**:
+
+- Posts educativos sobre artigos de lei
+- Infográficos com resumos legais
+- Threads explicativas
+- Casos práticos simplificados
+
+**Casos de uso**:
+
+- "Você sabia? Art. 1º da Lei 6.015/73 explica..."
+- Thread: "Entenda o regime de bens em 5 tweets"
+- Post: "3 mudanças importantes da Resolução 583/2024"
+
+---
+
+#### Agent 5: Gerador de Material Didático em PDF (futuro)
+
+**Objetivo**: Criar materiais de estudo visuais e estruturados
+
+**Funcionalidades**:
+
+- **Mapas mentais de leis**: Visualização hierárquica de artigos
+- **Resumos em PDF**: Síntese de legislação com formatação profissional
+- **Flashcards**: Material para memorização
+- **Esquemas e diagramas**: Fluxogramas de procedimentos legais
+- **Comparativos**: Tabelas comparando leis ou versões
+
+**Casos de uso**:
+
+- Gerar mapa mental da Lei 6.015/73 (Registros Públicos)
+- PDF resumido: "Lei de Registros Públicos - Principais Artigos"
+- Flashcards: 50 questões sobre regime de bens
+- Diagrama: Fluxo de registro de imóveis
+- Comparativo: Lei 6.015/73 vs Resolução 583/2024
+
+**Tecnologias**:
+
+- PDFKit ou Puppeteer para geração de PDF
+- D3.js ou Mermaid para mapas mentais
+- Templates customizáveis
+
+---
+
+#### Agent 6: Analisador de Mudanças Legislativas (futuro)
+
+**Objetivo**: Detectar e explicar alterações em leis
+
+**Funcionalidades**:
+
+- Comparar versões de leis
+- Identificar artigos alterados/revogados
+- Gerar resumo de impactos
+- Alertas de mudanças relevantes
+
+---
+
+#### Orquestrador de Agents
+
+- **Responsabilidade**: Coordenar múltiplos agents
+- **Roteamento**: Direcionar requisições para agent apropriado
+- **Composição**: Combinar resultados de múltiplos agents quando necessário
+
+### 3. Integração com Serviço Principal
+
+**Comunicação entre Serviços**
+
+- **Acesso direto ao banco MySQL** do serviço principal
+- Consultar IDs de bancas, leis, artigos via queries SQL
+- Gravar questões processadas e rascunhos no MySQL
+- Interface administrativa do serviço principal valida e aprova questões
+
+**Responsabilidades do Serviço Principal:**
+
+- Validação e aprovação de questões
+- Armazenamento final das questões aprovadas
+- Gerenciamento de usuários e permissões
+- Interface administrativa
+- Cadastro de bancas, leis, artigos
+
+## Fluxo de Trabalho
+
+### Pipeline de Geração (Assíncrono)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              SERVIÇO PRINCIPAL DLS                      │
+├─────────────────────────────────────────────────────────┤
+│  [Usuário faz upload de PDFs]                           │
+│   - PDF da prova (questões múltipla escolha)            │
+│   - PDF do gabarito (pode estar comentado)             │
+│         ↓                                               │
+│  [API Request] ──────────────────────┐                  │
+└──────────────────────────────────────│──────────────────┘
+                                       │
+                                       ↓ HTTP POST (multipart/form-data)
+┌─────────────────────────────────────────────────────────┐
+│           MICROSERVIÇO DLS IA (Este Projeto)            │
+│              (PostgreSQL + MySQL + Redis)               │
+├─────────────────────────────────────────────────────────┤
+│  [Recebe PDFs]                                          │
+│         ↓                                               │
+│  [Armazena PDFs temporariamente]                        │
+│         ↓                                               │
+│  [Cria Job na Fila (Bull/BullMQ)]                       │
+│         ↓                                               │
+│  [Retorna jobId imediatamente] ──────┐                  │
+│                                       │                 │
+│  ┌────────────────────────────────┐   │                 │
+│  │  WORKER (Background Process)   │   │                 │
+│  ├────────────────────────────────┤   │                 │
+│  │  Processa jobs da fila         │   │                 │
+│  │         ↓                      │   │                 │
+│  │  [Agent Orquestrador]          │   │                 │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 0: Extração e Parsing de PDFs              │   │
+│  │ [Agent de Extração de PDF]                       │   │
+│  │  - Extrai texto dos PDFs                        │   │
+│  │  - Identifica questões e alternativas           │   │
+│  │  - Identifica gabarito e comentários            │   │
+│  │  - Estrutura dados em formato JSON              │   │
+│  └──────────────────────────────────────────────────┘   │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 1: Análise e Classificação                 │   │
+│  │ [Agent de Classificação]                         │   │
+│  │  - Extrai metadados (banca, ano, etc.)          │   │
+│  │  - Identifica artigo/lei cobrado                │   │
+│  └──────────────────────────────────────────────────┘   │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 2: Resolução de IDs                        │   │
+│  │ [Consulta MySQL do Serviço Principal]           │   │
+│  │  - Busca ID da banca (readonly)                 │   │
+│  │  - Busca ID da lei (readonly)                   │   │
+│  │  - Busca ID do artigo (readonly)                │   │
+│  └──────────────────────────────────────────────────┘   │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 3: Busca de Informações Legais             │   │
+│  │ [Agent de Busca]                                 │   │
+│  │  - Consulta banco vetorial local (PostgreSQL)   │   │
+│  │  - Se necessário: busca em fontes oficiais      │   │
+│  └──────────────────────────────────────────────────┘   │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 4: Adaptação do Enunciado                  │   │
+│  │ [Agent de Adaptação]                             │   │
+│  │  - Reformula alternativa correta como V/F       │   │
+│  └──────────────────────────────────────────────────┘   │
+│         ↓                                               │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │ FASE 5: Geração do Gabarito                     │   │
+│  │ [Agent de Gabarito]                              │   │
+│  │  - Extrai/busca fundamentação legal             │   │
+│  └──────────────────────────────────────────────────┘   │
+│  │         ↓                      │   │                 │
+│  │  [Questões Estruturadas]       │   │                 │
+│  │         ↓                      │   │                 │
+│  │  [GRAVA no MySQL (batch)]      │   │                 │
+│  │         ↓                      │   │                 │
+│  │  [Atualiza status do job]      │   │                 │
+│  │         ↓                      │   │                 │
+│  │  [Webhook callback (opcional)] │   │                 │
+│  └────────────────────────────────┘   │                 │
+└───────────────────────────────────────┼─────────────────┘
+                                        │
+                                        ↓ HTTP Response (imediato)
+┌─────────────────────────────────────────────────────────┐
+│              SERVIÇO PRINCIPAL DLS                      │
+│                    (MySQL)                              │
+├─────────────────────────────────────────────────────────┤
+│  [Recebe jobId]                                         │
+│         ↓                                               │
+│  [Polling: GET /jobs/{jobId}/status]                    │
+│   ou                                                    │
+│  [Aguarda webhook callback]                             │
+│         ↓                                               │
+│  [Job completo: busca questões no MySQL]                │
+│         ↓                                               │
+│  [Interface de validação]                               │
+│         ↓                                               │
+│  [Admin aprova/rejeita]                                 │
+│         ↓                                               │
+│  [Atualiza status da questão no MySQL]                  │
+│  ÚNICO LUGAR onde questões são armazenadas              │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Exemplo de Processamento
+
+**1. Entrada:**
+
+- Questão de múltipla escolha (a, b, c, d, e)
+- Comentários com fundamentação legal
+- Gabarito indicando alternativa correta (ex: D)
+
+**2. Processamento:**
+
+- Agent extrai alternativa D (correta)
+- Agent busca artigo citado nos comentários
+- Agent reformula alternativa D como afirmação
+- Agent formata gabarito com fundamentação
+
+**3. Saída:**
+
+- Questão V/F estruturada
+- Gabarito: Verdadeiro
+- Fundamentação: Texto completo do artigo
+
+## Tecnologias Principais
+
+- **Framework**: NestJS
+- **Banco de Dados**:
+  - PostgreSQL + PGVector (próprio - embeddings e legislação)
+  - MySQL (serviço principal - leitura de IDs e gravação de questões)
+  - Redis (cache temporário - IDs, métricas, filas)
+- **Query Builder**: Kysely (para MySQL, sem tipagens)
+- **ORM**: Prisma (para PostgreSQL próprio)
+- **Job Queue**: Bull/BullMQ (filas de processamento assíncrono)
+- **PDF Processing**:
+  - pdf-parse ou pdf.js (extração de texto)
+  - LLM (estruturação e parsing inteligente)
+- **IA/ML**: Sistema de agents com LLM
+- **TypeScript**: Linguagem principal
+
+## Arquitetura de Microserviços
+
+```
+┌─────────────────────┐         ┌──────────────────────┐
+│  SERVIÇO PRINCIPAL  │────────►│   MICROSERVIÇO IA    │
+│       (DLS)         │  REST   │     (Este)           │
+│   (AdonisJS)        │         │   (NestJS)           │
+├─────────────────────┤         ├──────────────────────┤
+│ - Validação         │         │ - Processamento IA   │
+│ - Aprovação         │         │ - Banco Vetorial     │
+│ - Armazenamento     │         │ - Geração Questões   │
+│ - Interface Admin   │         │ - Classificação      │
+│ - Cadastros Base    │         │ - Query MySQL ──┐    │
+│   (Bancas, Leis)    │         │ - Grava questões│    │
+└─────────────────────┘         └─────────────────┼────┘
+        │                                  │      │
+        ↓                                  ↓      │
+  ┌──────────┐                      ┌──────────┐ │
+  │  MySQL   │◄─────────────────────┤PostgreSQL│ │
+  │          │ Kysely (read/write)  │+ PGVector│ │
+  └──────────┘                      └──────────┘ │
+        ▲                                         │
+        └─────────────────────────────────────────┘
+```
+
+## Data Structures
+
+### Input (from Main Service)
+
+```typescript
+interface ProcessExamRequest {
+  // PDF files
+  examPdf: File; // PDF with multiple choice questions
+  answerKeyPdf: File; // PDF with answer key (may or may not be commented)
+
+  // Metadata (optional - can be extracted from PDFs)
+  metadata?: {
+    bank?: string; // Ex: "IESES"
+    year?: number; // Ex: 2026
+    position?: string; // Ex: "Tabelião / Oficial de Registros"
+    organization?: string; // Ex: "TJ-PA"
+  };
+
+  // Callback URL (optional)
+  webhookUrl?: string; // URL to call when processing is complete
+}
+
+interface ProcessExamResponse {
+  jobId: string; // Job ID to track progress
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  estimatedTime?: number; // Estimated time in seconds
+  createdAt: string;
+}
+```
+
+### Extracted Question (after PDF parsing - Phase 0)
+
+```typescript
+interface ExtractedQuestion {
+  number: string; // Ex: "QUESTÃO 01"
+  statement: string; // Question statement
+  alternatives: {
+    letter: string; // a, b, c, d, e
+    text: string;
+  }[];
+  correctAnswer: string; // Correct alternative letter
+  comments?: string; // Comments from answer key (if available)
+}
+```
+
+### Job Status (for tracking)
+
+```typescript
+interface JobStatus {
+  jobId: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  progress: {
+    current: number; // Current question being processed
+    total: number; // Total questions found
+    percentage: number; // Percentage complete
+  };
+  result?: {
+    questionsCreated: number;
+    questionIds: string[]; // IDs in main service MySQL
+    errors: string[];
+  };
+  error?: string; // Error message if failed
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+```
+
+### Generated Question (Microservice Output)
+
+```typescript
+interface GeneratedQuestion {
+  number: number;
+
+  // Main service reference IDs
+  articleId: string; // Article ID from main service DB
+  lawId: string; // Law ID from main service DB
+  bankId: string; // Bank ID from main service DB
+  yearId?: string; // Year ID from main service DB (if applicable)
+
+  // Textual values (for display)
+  article: string; // Ex: "Art. 1º"
+  law: string; // Ex: "Lei 6.015/73"
+  bank: string; // Ex: "IESES"
+  year: number; // Ex: 2026
+  position: string; // Ex: "Tabelião / Oficial de Registros - Provimento"
+  organization: string; // Ex: "TJ-PA"
+
+  // Generated content
+  statement: string; // True/false statement
+  answer: boolean; // true = True, false = False
+  justification: string; // Full article text
+  comment?: string; // Additional comment (optional)
+}
+```
+
+## Requisitos Funcionais
+
+1. **Receber e processar PDFs** de provas e gabaritos
+2. **Extrair questões** de múltipla escolha dos PDFs
+3. **Identificar gabaritos** (com ou sem comentários)
+4. **Transformar** para formato verdadeiro/falso
+5. **Gerar gabaritos comentados** fundamentados
+6. **Classificar questões** com metadados relevantes (artigo, lei, banca, ano, cargo, órgão)
+7. **Validar informações** em fontes oficiais
+8. **Permitir validação manual** via interface administrativa do serviço principal
+9. **Extrair fundamentação legal** dos comentários ou buscar em fontes oficiais
+
+## Regras de Transformação
+
+### 1. Identificação do Artigo
+
+- Extrair artigo citado do cabeçalho ou comentários
+- Formato: `[Art. X, Lei Y]`
+- Prioridade: cabeçalho > primeira citação nos comentários
+
+### 2. Reformulação do Enunciado
+
+- **Sempre usar a alternativa CORRETA** como base
+- Transformar em afirmação objetiva
+- Remover contextualizações desnecessárias
+- Manter precisão técnica e termos legais
+- Evitar duplas negativas
+
+### 3. Casos Especiais
+
+#### Questões com múltiplos artigos
+
+- Criar uma questão para cada artigo relevante
+- Priorizar artigo mais específico
+
+#### Alternativa correta com múltiplas afirmações
+
+- Separar em questões diferentes quando possível
+- Ou manter conjunto de afirmações se indivisível
+
+#### Fundamentação em Resoluções/Decretos
+
+- Buscar texto oficial completo
+- Indicar claramente origem (CNJ, etc.)
+- Incluir data/número da resolução
+
+### 4. Validação de Qualidade
+
+- Enunciado deve ser claro e objetivo
+- Gabarito deve citar fonte oficial
+- Metadados completos e precisos
+- Fundamentação legal deve ser literal (texto original)
+
+## Próximos Passos
+
+### Fase 1: Infraestrutura
+
+- [ ] Configurar banco de dados PostgreSQL + PGVector
+- [ ] Configurar Redis para caching e filas
+- [ ] Setup de sistema de filas (Bull/BullMQ)
+- [ ] Setup de embeddings para busca semântica
+- [ ] Configurar conexão MySQL ao serviço principal (read/write)
+
+### Fase 2: Base de Conhecimento
+
+- [ ] Importar leis e códigos oficiais
+- [ ] Sistema de classificação e indexação
+- [ ] Pipeline de atualização de legislação
+- [ ] Geração de embeddings vetoriais
+
+### Fase 3: Desenvolvimento dos Agents
+
+- [ ] Agent de Extração de PDF (parsing de provas e gabaritos)
+- [ ] Agent de Classificação (parser de metadados)
+- [ ] Agent de Resolução de IDs (consulta MySQL do serviço principal)
+- [ ] Agent de Busca (RAG + web scraping oficial)
+- [ ] Agent de Adaptação (reformulação LLM)
+- [ ] Agent de Gabarito (extração + formatação)
+- [ ] Agent Orquestrador (coordenação de todo o pipeline)
+
+### Fase 4: API e Integração
+
+- [ ] API REST para upload de PDFs (assíncrono)
+- [ ] Endpoints de status de jobs
+- [ ] Sistema de filas para processamento em background
+- [ ] Workers para processar jobs
+- [ ] Integração com serviço principal
+- [ ] Sistema de webhooks/callbacks
+
+### Fase 5: Gerenciamento de Materiais Didáticos
+
+- [ ] API para upload de PDFs de materiais didáticos
+- [ ] Processamento e chunking inteligente de PDFs
+- [ ] Indexação de materiais no vector store
+- [ ] Busca semântica em materiais didáticos
+- [ ] Endpoints para listar e remover materiais
+- [ ] Integração da busca com agents existentes
+
+### Fase 6: Qualidade e Deploy
+
+- [ ] Testes automatizados (unit + e2e)
+- [ ] Validação de precisão legal
+- [ ] Monitoramento e métricas
+- [ ] Deploy e CI/CD
+- [ ] Documentação de API
+
+---
+
+## Documentação Técnica
+
+- **[Overview](docs/overview.md)** - Visão geral e roadmap do projeto
+- **[Agents Architecture](docs/agents-architecture.md)** - Detalhes de implementação de cada agent
+- **[Database Schema](docs/database-schema.md)** - Modelo de dados completo
+- **[API Endpoints](docs/api-endpoints.md)** - Documentação da API REST
+- **[Main Service Integration](docs/main-service-integration.md)** - Comunicação entre serviços
+
+---
+
+## Setup do Projeto
+
+### Pré-requisitos
+
+- Node.js 18+
+- PostgreSQL 15+
+- pnpm
+- Chave de API do OpenAI/Anthropic
+
+### Instalação
+
+```bash
+# Instalar dependências
+pnpm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env
+# Editar .env com suas credenciais
+```
+
+### Configuração do Banco de Dados
+
+```bash
+# Criar banco e habilitar PGVector
+psql -U postgres
+CREATE DATABASE dls_ia;
+\c dls_ia
+CREATE EXTENSION vector;
+
+# Executar migrations
+pnpm prisma migrate dev
+```
+
+### Executar o Projeto
+
+```bash
+# desenvolvimento
+pnpm run start
+
+# modo watch
+pnpm run start:dev
+
+# produção
+pnpm run start:prod
+```
+
+### Testes
+
+```bash
+# testes unitários
+pnpm run test
+
+# testes e2e
+pnpm run test:e2e
+
+# cobertura de testes
+pnpm run test:cov
 ```
 
 ---
 
-## 23. Leitura Arquitetural da Tree View
+## Estrutura do Projeto
 
-### `bootstrap`
-Responsável pela composição da aplicação: configuração, tracing, métricas, filas, validação, swagger e shutdown.
-
-### `config`
-Isola configuração por responsabilidade técnica, facilitando governança operacional.
-
-### `modules`
-É o centro da arquitetura. Cada bounded context segue a mesma disciplina estrutural: `infra`, `model` e `lib`.
-
-### `shared`
-Concentra apenas o que é transversal e reutilizável entre múltiplos módulos.
-
-### `docs`
-Preserva material arquitetural e operacional do projeto.
-
-### `test`
-Indica maturidade na estratégia de testes por nível.
-
----
-
-## 24. Regras Arquiteturais Obrigatórias
-
-1. Toda integração externa entra via `infra`.
-2. `model` não depende de `infra`.
-3. `lib` não acessa sistemas externos.
-4. Nenhum módulo deve publicar diretamente no legado sem ACL.
-5. `processing` coordena fluxo, mas não centraliza regra de domínio dos demais módulos.
-6. Reprocessamento deve existir por job e por step.
-7. Estado do pipeline deve ser persistido.
-8. `shared` só recebe itens realmente transversais.
-9. Dependências entre módulos devem ser mínimas, explícitas e revisáveis.
-10. Autenticação deve reutilizar a `api/v1`, sem duplicar mecanismo de identidade.
-
----
-
-## 25. Estratégia de Escalabilidade
-
-A escalabilidade proposta é **horizontal por fila, step e worker**, sem fragmentar o sistema em múltiplos serviços desde o início.
-
-### Implicações
-
-- etapas mais pesadas podem ganhar workers dedicados;
-- filas podem ser separadas por criticidade ou tipo de carga;
-- reprocessamento reduz custo de recomputação;
-- a plataforma mantém simplicidade operacional enquanto cresce.
-
----
-
-## 26. Estratégia de Resiliência
-
-A arquitetura deve suportar falhas transitórias e parciais em:
-
-- LLM;
-- storage;
-- vetor;
-- filas;
-- publicação;
-- autenticação externa;
-- conectividade com legado.
-
-### Mecanismos mínimos
-
-- timeout por integração;
-- retry controlado;
-- backoff;
-- idempotência;
-- locks distribuídos quando necessário;
-- DLQ;
-- estados persistidos;
-- reprocessamento controlado.
+```
+dls-ia/
+├── docs/                          # Documentação técnica
+│   ├── overview.md                # Visão geral do projeto
+│   ├── agents-architecture.md     # Arquitetura dos agents
+│   ├── database-schema.md         # Schema do banco
+│   ├── api-endpoints.md           # Documentação da API
+│   └── main-service-integration.md
+│
+├── src/
+│   ├── agents/                    # Implementação dos agents
+│   │   ├── orchestrator/
+│   │   ├── pdf-extraction/        # Extração e parsing de PDFs
+│   │   ├── classification/
+│   │   ├── id-resolution/
+│   │   ├── search/
+│   │   ├── adaptation/
+│   │   └── answer-key/
+│   │
+│   ├── modules/
+│   │   ├── questions/             # Módulo de processamento
+│   │   ├── legislation/           # Módulo de legislação
+│   │   ├── integration/           # Cliente HTTP serviço principal
+│   │   └── cache/                 # Gerenciamento de cache
+│   │
+│   ├── database/
+│   │   ├── prisma/                # Schema Prisma
+│   │   └── migrations/            # Migrations
+│   │
+│   └── common/
+│       ├── interfaces/
+│       ├── types/
+│       └── utils/
+│
+├── prisma/
+│   └── schema.prisma              # Schema do banco
+│
+├── test/
+│   ├── unit/
+│   └── e2e/
+│
+├── .env.example
+├── package.json
+└── README.md
+```
 
 ---
 
-## 27. Estratégia de Observabilidade
+## Variáveis de Ambiente
 
-Toda operação crítica deve ser rastreável por:
+```bash
+# PostgreSQL (Legislação e Logs)
+DATABASE_URL="postgresql://user:password@localhost:5432/dls_ia"
 
-- request;
-- job;
-- step;
-- draft;
-- publicação;
-- retry;
-- erro;
-- provider chamado;
-- correlação de fluxo.
+# MySQL (Serviço Principal - Questões)
+MYSQL_HOST="localhost"
+MYSQL_PORT="3306"
+MYSQL_USER="dls_ia_service"
+MYSQL_PASSWORD="password"
+MYSQL_DATABASE="dls_main"
 
-### Diretriz
+# Redis (Cache)
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+REDIS_PASSWORD=""
+REDIS_DB="0"
 
-A observabilidade deve ser transversal e não opcional. O pipeline não pode depender de inferência manual para diagnóstico.
+# LLM / IA
+OPENAI_API_KEY="sk-..."
+OPENAI_MODEL="gpt-4"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-large"
 
----
-
-## 28. Estratégia de Segurança
-
-A arquitetura deve prever:
-
-- integração com auth existente;
-- autorização por escopo/perfil;
-- validação de entrada;
-- sanitização de payloads;
-- masking de dados sensíveis;
-- proteção de segredos;
-- hardening de integrações;
-- proteção operacional de filas e rotas sensíveis.
-
----
-
-## 29. Trade-offs da Decisão
-
-| Decisão | Ganho | Custo |
-| --- | --- | --- |
-| Remover OCR do fluxo base | menos complexidade e menor custo | cobertura menor para PDFs não textuais |
-| Reaproveitar auth existente | consistência e menor esforço | dependência da infraestrutura já existente |
-| Monólito modular | simplicidade operacional com boundaries claros | exige disciplina contínua sobre modularização |
-| `infra/model/lib` | navegação previsível e pragmática | menos formalismo do que uma clean “pura” |
-| Shared restrito | menos acoplamento acidental | exige critério maior nas revisões |
-
----
-
-## 30. Riscos e Mitigações
-
-| Risco | Impacto | Mitigação |
-| --- | --- | --- |
-| `processing` virar módulo excessivamente centralizador | Alto | limitar ao papel de coordenação e estado |
-| `shared` crescer sem critério | Médio/Alto | política explícita de transversalidade |
-| serviços em `infra` virarem “god services” | Alto | dividir por responsabilidade e revisar ownership |
-| acoplamento entre módulos | Alto | contratos explícitos e revisão de dependência |
-| dependência excessiva da auth externa | Médio | camada de adaptação clara e isolamento do gateway |
-| necessidade futura de OCR | Médio | manter OCR apenas como fallback futuro, não como base |
-| contaminação pelo legado | Alto | ACL obrigatória com payload canônico interno |
-
----
-
-## 31. Critérios de Aceite
-
-Esta issue será considerada alinhada quando houver consenso sobre:
-
-- adoção de **monólito modular** como base;
-- organização dos módulos em **`infra`**, **`model`** e **`lib`**;
-- uso disciplinado de `shared`;
-- reaproveitamento da autenticação da `api/v1`;
-- remoção do OCR do fluxo base;
-- uso de pipeline assíncrono com jobs e steps;
-- preservação de ACL no fluxo de publicação;
-- segurança, resiliência e observabilidade como requisitos estruturais.
-
----
-
-## 32. Melhorias Aplicadas em Relação à Proposta Anterior
-
-Em relação à proposta arquitetural anterior, os principais avanços desta versão são:
-
-- simplificação do fluxo base com remoção de OCR do caminho principal;
-- alinhamento explícito com a autenticação existente;
-- substituição do eixo “clean + hexagonal integral” por uma arquitetura mais pragmática;
-- reforço de ownership por módulo;
-- padronização estrutural mais simples e navegável;
-- fortalecimento das regras de dependência;
-- tree view totalmente compatível com o novo direcionamento;
-- maior clareza entre o que é domínio, o que é infraestrutura e o que é apoio local.
-
----
-
-## 33. Próximas Discussões Recomendadas
-
-Após validação desta arquitetura geral, recomenda-se abrir discussões específicas sobre:
-
-1. modelo de dados operacional;
-2. contratos de API;
-3. estratégia de filas, retries e prioridades;
-4. política de publicação e ACL;
-5. observabilidade e correlação ponta a ponta;
-6. segurança transversal;
-7. taxonomia e resolução canônica;
-8. estratégia de testes e hardening operacional.
-
----
-
-## 34. Conclusão
-
-A arquitetura mais aderente ao contexto atual do projeto é um **monólito modular em NestJS + TypeScript**, organizado por domínio, com camadas internas **`infra`**, **`model`** e **`lib`**, reaproveitando a autenticação já existente da `api/v1`, operando com **extração textual + parsing** no fluxo base e preservando o legado atrás de uma **ACL explícita**.
-
-Essa direção entrega uma base:
-
-- técnica e estruturalmente sólida;
-- mais simples de manter;
-- mais fácil de navegar;
-- mais compatível com o estágio atual do projeto;
-- preparada para crescer sem impor abstrações excessivas cedo demais.
+# Aplicação
+PORT=3000
+NODE_ENV="development"
+```
