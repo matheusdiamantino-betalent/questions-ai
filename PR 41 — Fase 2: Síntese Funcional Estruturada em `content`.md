@@ -16,7 +16,7 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR muda o eixo após as PRs 38 a 40: sai da evolução de metadata/contexto e entrega o primeiro ganho funcional percebido diretamente por quem consome `content`. O retorno passa a incluir uma síntese explícita e enxuta, mantendo o contrato simples.
+> Esta PR muda o eixo após as PRs 38 a 40: sai da evolução de metadata e contexto e entrega o primeiro ganho funcional percebido diretamente por quem consome `content`. O retorno passa a incluir uma síntese explícita e enxuta, mantendo o contrato simples e o boundary já consolidado.
 >
 > - preserva `content` como boundary funcional centralizador
 > - adiciona `summary` como leitura rápida do resultado
@@ -45,37 +45,37 @@
 
 ## 1. Síntese Executiva
 
-As PRs 38, 39 e 40 consolidaram quando usar contexto, como sinalizar a tentativa e como comunicar o estado final do fluxo contextual. Com essa base estabilizada, o próximo passo natural é gerar valor diretamente no retorno funcional.
+As PRs 38, 39 e 40 consolidaram o uso de contexto no fluxo de `content`, definiram como essa tentativa deveria ser sinalizada e estabilizaram a comunicação do estado final do processamento contextual. Esse eixo entregou previsibilidade interna e clareza de contrato, mas ainda sem um ganho funcional imediato mais perceptível no payload final consumido pelo cliente.
 
-Esta PR adiciona uma síntese explícita no contrato de `content`, oferecendo leitura rápida do resultado principal sem exigir interpretação integral do texto retornado. A arquitetura permanece a mesma e a evolução ocorre no boundary já existente.
+A PR 41 avança exatamente no próximo passo mínimo correto: mantém o mesmo boundary, preserva a arquitetura já aprovada e adiciona uma leitura resumida do resultado principal no próprio retorno funcional. Em vez de abrir nova superfície ou sofisticar o fluxo, esta entrega melhora a utilidade do endpoint existente com um acréscimo pequeno, direto e fácil de revisar.
 
 ---
 
 ## 2. Objetivo do PR
 
-- adicionar `summary` no retorno funcional de `content`
-- melhorar consumo rápido por frontend e integrações
-- manter compatibilidade com o contrato atual
-- elevar valor percebido do endpoint existente
-- evoluir sem ampliar arquitetura aprovada
+- adicionar `summary` ao retorno funcional de `content`
+- oferecer leitura rápida do resultado principal sem substituir `output`
+- melhorar o consumo do endpoint por frontend e integrações
+- manter o fluxo atual e o contrato centralizados no mesmo boundary
+- evoluir o valor percebido da resposta sem ampliar a arquitetura
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão central desta PR é manter toda a evolução dentro do `ContentService`, owner do boundary funcional. O serviço continua coordenando a chamada ao motor de IA e passa a devolver também uma síntese enxuta do resultado principal.
+A decisão central desta PR é manter toda a evolução dentro do fluxo já consolidado de `content`, com o `ContentService` permanecendo como owner do boundary funcional. O serviço continua coordenando a chamada ao motor de IA e passa a devolver também uma síntese curta derivada do resultado principal, sem introduzir uma segunda API, sem presenter paralelo e sem redistribuir responsabilidades em novas camadas.
 
-Não há criação de novo endpoint, presenter paralelo ou contrato alternativo. O ganho funcional é incorporado no mesmo fluxo já aprovado, preservando simplicidade operacional e baixo ruído de review.
+A arquitetura já aprovada é preservada integralmente. O ganho funcional entra como continuação controlada do que já existe, reduzindo ruído de review e evitando expansão indevida para formatos, componentes ou contratos que ainda não fazem parte do slice.
 
 ---
 
 ## 4. Escopo
 
 - adicionar campo `summary` no retorno de `content`
-- gerar síntese curta a partir do resultado principal
+- derivar uma síntese curta a partir do resultado principal
 - preservar `output` como resposta completa
-- ajustar testes proporcionais ao slice
-- manter o fluxo atual de execução
+- ajustar tipos, contrato e testes afetados pelo novo campo
+- manter o fluxo atual de execução sem nova superfície pública
 
 ---
 
@@ -84,12 +84,12 @@ Não há criação de novo endpoint, presenter paralelo ou contrato alternativo.
 - streaming de resposta
 - múltiplos formatos de saída
 - markdown renderizado
-- cards de interface
-- seções avançadas (`recommendations`, `warnings`, etc.)
-- persistência de histórico
+- estruturação em blocos ricos de UI
+- campos avançados como `recommendations`, `warnings` ou equivalentes
+- persistência de histórico de sínteses
 - analytics de consumo
 - cache distribuído
-- nova API de apresentação
+- nova API de apresentação ou endpoint dedicado
 
 ---
 
@@ -103,10 +103,10 @@ flowchart LR
     C --> D[AiService]
     D --> E[Output principal]
     E --> F[Derivação da síntese]
-    F --> G[Resposta com output + summary]
+    F --> G[Resposta com output + summary + metadata]
 ```
 
-O fluxo principal permanece o mesmo. A mudança desta PR está na agregação de uma leitura rápida antes da resposta final.
+O fluxo principal permanece o mesmo já consolidado nas PRs anteriores. A diferença desta entrega está apenas na derivação de uma leitura resumida antes da resposta final, sem alterar o boundary nem espalhar a responsabilidade para componentes paralelos.
 
 ---
 
@@ -126,49 +126,49 @@ type ContentExecuteOutput = {
 };
 ```
 
-O contrato continua enxuto. `output` segue como resposta completa e `summary` entra como complemento funcional direto.
+O contrato continua enxuto. `output` segue como resposta completa, `summary` entra como complemento funcional direto e `metadata` permanece responsável apenas pelo estado contextual já introduzido no eixo anterior.
 
 ---
 
 ## 8. Regras de Implementação
 
-A síntese deve ser curta, previsível e derivada no próprio `ContentService`.
+A implementação deve manter controller fino e concentrar a composição da resposta no `ContentService`, que já é o boundary funcional da operação. A síntese deve ser curta, previsível e derivada sem transformar este slice em uma nova estratégia de formatação.
 
-- preservar `output` integral
-- gerar `summary` sem nova chamada desnecessária
-- evitar heurísticas complexas
-- manter responsabilidade centralizada no boundary
-- não introduzir novas dependências
+- preservar `output` integral como fonte principal
+- gerar `summary` sem criar nova chamada desnecessária ao fluxo externo
+- evitar heurísticas complexas ou estruturação excessiva
+- manter a responsabilidade no mesmo service já aprovado
+- não introduzir novas dependências, camadas ou contratos paralelos
 
-Se houver dúvida entre sofisticação e previsibilidade, priorizar previsibilidade.
+Se houver dúvida entre sofisticação e previsibilidade, a escolha correta neste recorte é previsibilidade.
 
 ---
 
 ## 9. Critérios de Review
 
 - `content` permanece como boundary funcional centralizador
-- `summary` agrega valor real ao contrato
-- `output` continua preservado
-- o ajuste permaneceu pequeno e proporcional ao slice
-- não houve expansão arquitetural indevida
-- testes cobrem o novo comportamento
-- contrato segue simples para consumo
+- `summary` foi adicionado como ganho funcional direto e proporcional ao slice
+- `output` continua preservado como resposta completa
+- a mudança não reabre arquitetura já aprovada
+- o ajuste permaneceu pequeno, coeso e fácil de revisar
+- tipos e testes foram atualizados de forma proporcional
+- não houve criação de nova superfície pública paralela
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] retorno funcional inclui `summary`
-- [ ] `summary` representa de forma útil o resultado principal
+- [ ] o retorno funcional inclui `summary`
+- [ ] `summary` representa de forma útil e curta o resultado principal
 - [ ] `output` continua disponível integralmente
-- [ ] fluxo atual de execução foi preservado
-- [ ] testes afetados continuam passando
-- [ ] nenhuma nova superfície pública paralela foi criada
+- [ ] o fluxo atual de execução foi preservado
+- [ ] tipos e testes afetados continuam consistentes com o novo contrato
+- [ ] nenhuma nova API ou formato paralelo foi criado nesta PR
 
 ---
 
 ## 11. Conclusão
 
-A PR 41 inaugura um eixo de maior entrega funcional após a consolidação contextual das PRs anteriores. Sem redesenhar a arquitetura, o sistema passa a oferecer uma resposta mais útil e rápida para consumo no mesmo endpoint de `content`.
+A PR 41 inaugura um eixo de maior valor percebido após a sequência que consolidou contexto e metadata em `content`. Sem redesenhar a arquitetura nem inflar o recorte, o sistema passa a devolver uma resposta mais útil para consumo rápido no mesmo boundary já estabilizado.
 
-É uma evolução direta, pequena e revisável: mais valor percebido no boundary existente, mantendo simplicidade e continuidade.
+É uma continuação direta, pequena e revisável: mais utilidade no retorno existente, com o mínimo de mudança necessário e sem antecipar os próximos passos além do que esta fase realmente pede.
