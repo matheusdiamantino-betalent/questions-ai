@@ -1,4 +1,4 @@
-# 🧩 PR 48 — Fase 2: Consolidação do Contrato Público de Resultado em Ingestion
+# 📜 PR 48 — Fase 2: Consolidação do Contrato Público de Resultado em Ingestion
 ## Formalização explícita do shape de leitura da ingestion concluída na borda HTTP, sem alterar o fluxo operacional
 
 ---
