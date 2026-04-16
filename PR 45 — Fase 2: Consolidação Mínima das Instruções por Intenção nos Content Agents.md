@@ -1,4 +1,4 @@
-# 🧩 PR 45 — Fase 2: Primeiro Consumo Operacional do PDF Extraction em Ingestion
+# ⚙️ PR 45 — Fase 2: Primeiro Consumo Operacional do PDF Extraction em Ingestion
 ## Integração mínima do PDF extraction ao fluxo de ingestion, reutilizando o `AiService` sem ampliar a arquitetura da fase
 
 ---
