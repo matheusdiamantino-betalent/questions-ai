@@ -1,5 +1,5 @@
 # 🧩 PR 45 — Fase 2: Primeiro Consumo Operacional do PDF Extraction em Ingestion
-## Integração mínima do PDF extraction ao fluxo de ingestion, reutilizando o AiService sem ampliar a arquitetura da fase
+## Integração mínima do PDF extraction ao fluxo de ingestion, reutilizando o `AiService` sem ampliar a arquitetura da fase
 
 ---
 
@@ -8,7 +8,7 @@
 ![PR](https://img.shields.io/badge/PR-45-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-pdf%20extraction%20em%20ingestion-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-primeiro%20consumo%20operacional%20pdf-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,79 +16,78 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua a PR 44. Após disponibilizar o consumo compartilhado do `PdfExtractionAgent` no `AiService`, o próximo passo mínimo correto é conectar esse capability ao fluxo operacional de ingestion.
+> Esta PR continua diretamente a PR 44. Depois de expor o `PdfExtractionAgent` via `AiService`, o próximo passo mínimo correto é aplicar esse capability em um fluxo real já existente, sem abrir uma trilha paralela nem expandir a fase além do necessário.
 >
-> - aplica `extractPdf()` em um fluxo real da aplicação
-> - reutiliza o boundary compartilhado já aprovado
-> - mantém o processamento explícito e pequeno
-> - evita pipeline maior ou coordenação entre múltiplos agents
+> - conecta `extractPdf()` ao fluxo operacional de `ingestion`
+> - reutiliza o boundary compartilhado já aprovado em `shared/ai`
+> - mantém o processamento explícito, pequeno e revisável
 >
-> **Este PR não implementa upload real de arquivo, OCR, múltiplos formatos, roteamento por tipo de documento ou encadeamento avançado entre etapas.**
+> **Este PR não implementa upload binário real, OCR, múltiplos formatos, roteamento por tipo de documento ou encadeamento avançado entre etapas.**
 
 ---
 
 ## 📌 Sumário
 
-1. Síntese Executiva
-2. Objetivo do PR
-3. Decisão Arquitetural
-4. Escopo
-5. Fora de Escopo
-6. Fluxo Arquitetural
-7. Contratos Mínimos
-8. Regras de Implementação
-9. Critérios de Review
-10. Critérios de Aceite
-11. Conclusão
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Objetivo do PR](#2-objetivo-do-pr)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo](#4-escopo)
+5. [Fora de Escopo](#5-fora-de-escopo)
+6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
+7. [Contratos Mínimos](#7-contratos-mínimos)
+8. [Regras de Implementação](#8-regras-de-implementação)
+9. [Critérios de Review](#9-critérios-de-review)
+10. [Critérios de Aceite](#10-critérios-de-aceite)
+11. [Conclusão](#11-conclusão)
 
 ---
 
 ## 1. Síntese Executiva
 
-A PR 43 introduziu o primeiro agent concreto da fase. A PR 44 tornou esse agent consumível de forma compartilhada por meio do `AiService`. Com isso consolidado, a evolução natural agora é aplicar esse capability em um fluxo operacional real.
+A PR 43 introduziu o primeiro agent concreto da fase por meio do `PdfExtractionAgent`. A PR 44 consolidou esse capability no boundary compartilhado ao disponibilizar seu consumo via `AiService`, sem espalhar conhecimento do agent pelos módulos consumidores. Com essa base já aprovada, o próximo passo mínimo natural é aplicar a extração em um fluxo operacional existente da aplicação.
 
-Esta PR faz esse movimento dentro de `ingestion`, módulo que já representa a entrada e o processamento inicial de conteúdo. O objetivo é inserir a extração de PDF no ponto mínimo necessário, sem redesenhar o fluxo já existente.
+Esta PR faz exatamente esse movimento dentro de `ingestion`. Em vez de abrir um pipeline novo ou antecipar uma orquestração maior, ela apenas conecta `AiService.extractPdf()` ao ponto necessário do fluxo e passa a tratar o `extractedText` como entrada útil para a etapa seguinte. O ganho aqui é funcional e direto: o capability deixa de ser apenas compartilhado e passa a ser efetivamente consumido em produção de código, preservando a arquitetura já definida.
 
 ---
 
 ## 2. Objetivo do PR
 
-- integrar `AiService.extractPdf()` ao fluxo de ingestion
-- utilizar o texto extraído como entrada do processamento subsequente
-- manter o fluxo atual com alterações mínimas
-- validar o comportamento com testes objetivos
-- continuar a fase sem ampliar a arquitetura
+- integrar `AiService.extractPdf()` ao fluxo de `ingestion`
+- utilizar o `extractedText` como conteúdo de entrada do processamento subsequente
+- manter o caminho principal com alteração mínima e explícita
+- validar o novo comportamento com testes objetivos
+- continuar a fase sem introduzir nova arquitetura
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A arquitetura existente é preservada. O módulo de ingestion continua responsável pelo processamento operacional, enquanto o `AiService` segue como boundary compartilhado para execução do agent.
+A arquitetura aprovada é mantida. `shared/ai` continua como boundary compartilhado para execução do capability de extração, enquanto `ingestion` permanece responsável pelo fluxo operacional que consome esse resultado. Não há redefinição de módulos, contratos amplos nem criação de camadas intermediárias para esta integração.
 
-A decisão central desta PR é apenas inserir uma delegação explícita ao `extractPdf()` no ponto correto do fluxo, reaproveitando a base construída nas PRs anteriores sem introduzir novos componentes estruturais.
+A decisão central desta PR é inserir uma delegação explícita ao `AiService.extractPdf()` no ponto correto do fluxo já existente. Isso preserva a separação entre consumo operacional e implementação do agent, evita acoplamento direto de `ingestion` com `PdfExtractionAgent` e mantém a progressão da fase no menor recorte funcional possível.
 
 ---
 
 ## 4. Escopo
 
-- chamar `AiService.extractPdf()` no fluxo de ingestion
-- consumir `extractedText` como conteúdo processável
-- ajustar o caminho principal apenas no necessário
-- adicionar cobertura de testes do comportamento novo
-- preservar contratos existentes quando possível
+- chamar `AiService.extractPdf()` dentro do fluxo de `ingestion`
+- consumir `extractedText` como conteúdo processável na sequência do caminho atual
+- ajustar o caminho principal apenas no necessário para acomodar a integração
+- adicionar testes do comportamento introduzido nesta PR
+- preservar contratos já existentes sempre que possível
 
 ---
 
 ## 5. Fora de Escopo
 
-- upload binário de PDF
-- OCR
-- parsing avançado de arquivo
-- múltiplos tipos de documento
-- strategy/router de agents
-- pipeline multi-step
-- observabilidade expandida
-- nova persistência específica para arquivos
+- upload real de arquivo PDF
+- OCR ou leitura de conteúdo escaneado
+- suporte a múltiplos tipos de documento
+- roteamento por tipo de arquivo ou strategy de agents
+- pipeline multi-step ou coordenação entre múltiplos agents
+- observabilidade expandida da etapa
+- persistência específica para binário ou metadados de arquivo
+- redesenho do fluxo de `ingestion`
 
 ---
 
@@ -99,62 +98,64 @@ A decisão central desta PR é apenas inserir uma delegação explícita ao `ext
   'primaryColor':'#0f172a',
   'primaryTextColor':'#e5e7eb',
   'primaryBorderColor':'#22d3ee',
-  'lineColor':'#39ff14'
+  'lineColor':'#39ff14',
+  'secondaryColor':'#111827',
+  'tertiaryColor':'#0b1220'
 }}}%%
 flowchart LR
-    A["Ingestion Input"] --> B["Ingestion Flow"]
+    A["Ingestion Input"] --> B["Ingestion Service / Flow"]
     B --> C["AiService.extractPdf()"]
-    C --> D["Extracted Text"]
-    D --> E["Existing Processing"]
+    C --> D["extractedText"]
+    D --> E["Existing Processing Path"]
 ```
 
 ---
 
 ## 7. Contratos Mínimos
 
-Reutiliza os contratos já existentes do PDF extraction:
+Esta PR reutiliza os contratos mínimos já introduzidos para PDF extraction e não cria uma nova superfície compartilhada para o slice atual.
 
 ```ts
-PdfExtractionInput
-PdfExtractionOutput
+export type PdfExtractionInput = {
+  extractedText: string;
+};
+
+export type PdfExtractionOutput = {
+  extractedText: string;
+};
 ```
 
-Sem criação de novos contratos globais, salvo ajuste mínimo necessário no payload de ingestion.
+Se houver ajuste local no payload de `ingestion`, ele deve permanecer restrito ao ponto de integração e não deve introduzir um contrato global novo sem necessidade real.
 
 ---
 
 ## 8. Regras de Implementação
 
-- inserir a extração apenas no ponto necessário do fluxo
-- manter processor/service coeso e legível
-- sem branches artificiais
-- sem preparar múltiplos formatos futuros
-- sem abstração prematura
-- testes proporcionais ao slice
+A integração deve permanecer concentrada no fluxo principal de `ingestion`, com controller fino e service/processamento explícito. O consumo de extração deve ocorrer por meio do `AiService`, nunca por acoplamento direto ao agent concreto. O texto extraído deve seguir imediatamente para o caminho já existente, sem bifurcações artificiais e sem preparar suporte implícito para formatos ou etapas futuras.
+
+Também não entra nesta PR qualquer foundation paralela para roteamento, pipeline, observabilidade ou coordenação entre capabilities. O objetivo é somente tornar o PDF extraction operacional dentro de um fluxo real, com a menor alteração necessária e com testes proporcionais ao recorte.
 
 ---
 
 ## 9. Critérios de Review
 
-- o fluxo de ingestion passou a consumir `extractPdf()` sem inflar a arquitetura
-- a integração está clara e explícita
-- não houve regressão no fluxo anterior
-- o boundary entre ingestion e shared/ai foi preservado
-- testes cobrem o novo comportamento
-- a PR permanece pequena e revisável
+O review deve validar se a integração ficou explícita, simples e aderente à progressão entre PR 44 e PR 45. É importante confirmar que `ingestion` passou a consumir `AiService.extractPdf()` sem conhecer detalhes internos do agent, que o fluxo principal permaneceu legível e que não houve introdução de componentes estruturais adicionais para um problema ainda pequeno.
+
+Também deve ser observado se o comportamento novo está coberto por testes objetivos, se o recorte continua pequeno e revisável e se a PR não embute antecipações como múltiplos formatos, strategy de agents ou pipeline maior do que o slice realmente pede.
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] ingestion utiliza `AiService.extractPdf()` no fluxo definido
-- [ ] o texto extraído segue para o processamento existente
+- [ ] `ingestion` utiliza `AiService.extractPdf()` no ponto definido do fluxo
+- [ ] o `extractedText` segue para o processamento subsequente já existente
+- [ ] o consumo ocorre via `AiService`, sem acoplamento direto ao `PdfExtractionAgent`
 - [ ] testes do novo caminho estão passando
 - [ ] nenhum componente estrutural extra foi introduzido
-- [ ] suíte relacionada permanece verde
+- [ ] a suíte relacionada permanece verde
 
 ---
 
 ## 11. Conclusão
 
-A PR 45 aplica o primeiro consumo operacional do PDF extraction em um fluxo real da aplicação. O avanço reutiliza a base compartilhada construída anteriormente, mantém simplicidade e adiciona valor funcional concreto sem ampliar o desenho da fase.
+A PR 45 realiza o primeiro consumo operacional do PDF extraction em um fluxo real da aplicação. Ela continua diretamente a PR 44, transforma um capability já compartilhado em uso efetivo dentro de `ingestion` e preserva o desenho aprovado da fase. O avanço é pequeno, funcional e controlado, exatamente no nível de recorte esperado para a sequência atual.
