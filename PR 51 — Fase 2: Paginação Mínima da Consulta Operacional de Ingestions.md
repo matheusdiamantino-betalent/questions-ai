@@ -1,4 +1,4 @@
-# 🧩 PR 51 — Fase 2: Paginação Mínima da Consulta Operacional de Ingestions
+# 📄 PR 51 — Fase 2: Paginação Mínima da Consulta Operacional de Ingestions
 ## Controle de volume e ordenação previsível para a listagem criada na PR 50
 
 ---
