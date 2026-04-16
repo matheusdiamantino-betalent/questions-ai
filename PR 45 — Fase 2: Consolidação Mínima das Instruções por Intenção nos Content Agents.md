@@ -1,5 +1,5 @@
-# 🧩 PR 45 — Fase 2: Consolidação Mínima das Instruções por Intenção nos Content Agents
-## Organização interna da preparação por intent sem introduzir nova camada de prompting
+# 🧩 PR 45 — Fase 2: Primeiro Consumo Operacional do PDF Extraction em Ingestion
+## Integração mínima do PDF extraction ao fluxo de ingestion, reutilizando o AiService sem ampliar a arquitetura da fase
 
 ---
 
@@ -7,8 +7,8 @@
 
 ![PR](https://img.shields.io/badge/PR-45-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-agent%20routing-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-instrucoes%20por%20intencao-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-pdf%20extraction%20em%20ingestion-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,146 +16,145 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua a evolução das PRs 42, 43 e 44. Após introduzir agents, classificar intenção e especializar o comportamento inicial, o próximo passo mínimo correto é consolidar as instruções por intenção de forma explícita e coesa dentro do módulo.
+> Esta PR continua a PR 44. Após disponibilizar o consumo compartilhado do `PdfExtractionAgent` no `AiService`, o próximo passo mínimo correto é conectar esse capability ao fluxo operacional de ingestion.
 >
-> - preserva endpoint e contratos atuais
-> - mantém ContentService como owner do fluxo
-> - mantém agents como boundary de comportamento
-> - reduz acoplamento de textos inline
-> - mantém mudança pequena e revisável
+> - aplica `extractPdf()` em um fluxo real da aplicação
+> - reutiliza o boundary compartilhado já aprovado
+> - mantém o processamento explícito e pequeno
+> - evita pipeline maior ou coordenação entre múltiplos agents
 >
-> **Este PR não adiciona prompt engine genérica, registry de templates, múltiplas intenções, tools externos ou nova arquitetura paralela.**
+> **Este PR não implementa upload real de arquivo, OCR, múltiplos formatos, roteamento por tipo de documento ou encadeamento avançado entre etapas.**
 
 ---
 
 ## 📌 Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 ---
 
 ## 1. Síntese Executiva
 
-A PR 42 introduziu os content agents como boundary inicial de comportamento no módulo. A PR 43 adicionou a classificação mínima de intenção. A PR 44 conectou essa classificação ao roteamento e tornou o comportamento inicial mais observável no fluxo.
+A PR 43 introduziu o primeiro agent concreto da fase. A PR 44 tornou esse agent consumível de forma compartilhada por meio do `AiService`. Com isso consolidado, a evolução natural agora é aplicar esse capability em um fluxo operacional real.
 
-A PR 45 mantém essa linha sem reabrir a arquitetura aprovada. O recorte agora é consolidar as instruções por intenção de forma explícita, local e previsível, reduzindo strings inline dispersas e preservando a mesma superfície pública do módulo.
-
-Esse é o próximo passo mínimo correto porque melhora clareza e manutenção exatamente no ponto em que a especialização já existe, sem introduzir nova camada de prompting, sem generalizar prematuramente e sem ampliar o escopo funcional da fase.
+Esta PR faz esse movimento dentro de `ingestion`, módulo que já representa a entrada e o processamento inicial de conteúdo. O objetivo é inserir a extração de PDF no ponto mínimo necessário, sem redesenhar o fluxo já existente.
 
 ---
 
 ## 2. Objetivo do PR
 
-- consolidar instruções de `summary` em estrutura mínima explícita
-- consolidar instruções de `guidance` em estrutura mínima explícita
-- manter `general` como comportamento neutro
-- padronizar a preparação de conteúdo dentro dos agents
-- preservar o fluxo atual sem impacto externo
+- integrar `AiService.extractPdf()` ao fluxo de ingestion
+- utilizar o texto extraído como entrada do processamento subsequente
+- manter o fluxo atual com alterações mínimas
+- validar o comportamento com testes objetivos
+- continuar a fase sem ampliar a arquitetura
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A arquitetura atual é mantida. `ContentService` continua como owner do fluxo, `ContentIntentClassifier` continua responsável por classificar a intenção e `AgentRouter` continua resolvendo o agent adequado para cada caso.
+A arquitetura existente é preservada. O módulo de ingestion continua responsável pelo processamento operacional, enquanto o `AiService` segue como boundary compartilhado para execução do agent.
 
-A decisão central desta PR é apenas organizar a origem das instruções já usadas pelos agents. Em vez de manter textos inline dispersos na implementação, cada comportamento passa a consumir instruções locais explícitas, próximas ao próprio boundary, mantendo simplicidade e evitando a introdução de uma camada genérica que ainda não se justifica.
+A decisão central desta PR é apenas inserir uma delegação explícita ao `extractPdf()` no ponto correto do fluxo, reaproveitando a base construída nas PRs anteriores sem introduzir novos componentes estruturais.
 
 ---
 
 ## 4. Escopo
 
-- extrair instruções textuais para constantes locais ou contratos mínimos internos do módulo
-- manter `SummaryAgent`, `GuidanceAgent` e `GeneralAgent` existentes
-- padronizar a preparação de conteúdo entre os agents
-- ajustar testes unitários conforme a organização interna
-- preservar metadata e contrato atual do retorno
+- chamar `AiService.extractPdf()` no fluxo de ingestion
+- consumir `extractedText` como conteúdo processável
+- ajustar o caminho principal apenas no necessário
+- adicionar cobertura de testes do comportamento novo
+- preservar contratos existentes quando possível
 
 ---
 
 ## 5. Fora de Escopo
 
-- prompt builder genérico
-- registry central de templates
-- strategy factory
-- múltiplas intenções simultâneas
-- planner multi-step
-- memória entre execuções
-- tools externas
-- novo endpoint
-- alteração no contrato de resposta
+- upload binário de PDF
+- OCR
+- parsing avançado de arquivo
+- múltiplos tipos de documento
+- strategy/router de agents
+- pipeline multi-step
+- observabilidade expandida
+- nova persistência específica para arquivos
 
 ---
 
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {'theme':'dark','themeVariables':{
+  'primaryColor':'#0f172a',
+  'primaryTextColor':'#e5e7eb',
+  'primaryBorderColor':'#22d3ee',
+  'lineColor':'#39ff14'
+}}}%%
 flowchart LR
-    A[Requisição Content] --> B[ContentService]
-    B --> C[ContentIntentClassifier]
-    C --> D[AgentRouter]
-    D --> E[ContentAgent + Instrução Local]
-    E --> F[AiService]
-    F --> G[Resposta Final]
+    A["Ingestion Input"] --> B["Ingestion Flow"]
+    B --> C["AiService.extractPdf()"]
+    C --> D["Extracted Text"]
+    D --> E["Existing Processing"]
 ```
-
-O fluxo principal permanece o mesmo já aprovado na fase. A mudança desta PR fica restrita à preparação interna do conteúdo dentro do boundary dos agents, sem alterar entrada, roteamento macro ou formato de saída.
 
 ---
 
 ## 7. Contratos Mínimos
 
-Os contratos públicos permanecem inalterados. Não há novos DTOs externos, não há alteração do payload de entrada e não há mudança no contrato de resposta retornado pelo módulo.
+Reutiliza os contratos já existentes do PDF extraction:
 
-Quando houver estrutura interna nova para apoiar a organização das instruções, ela deve permanecer mínima, local ao módulo e estritamente voltada à composição do texto preparado pelos agents.
+```ts
+PdfExtractionInput
+PdfExtractionOutput
+```
+
+Sem criação de novos contratos globais, salvo ajuste mínimo necessário no payload de ingestion.
 
 ---
 
 ## 8. Regras de Implementação
 
-- manter controller fino e sem regra de negócio
-- preservar `ContentService` como owner explícito do fluxo
-- manter instruções próximas ao agent responsável
-- evitar abstrações antecipadas de prompting
-- não criar runtime paralelo, engine genérica ou registry desnecessário
-- manter comportamento previsível, legível e fácil de testar
-- limitar a implementação ao recorte organizacional desta PR
+- inserir a extração apenas no ponto necessário do fluxo
+- manter processor/service coeso e legível
+- sem branches artificiais
+- sem preparar múltiplos formatos futuros
+- sem abstração prematura
+- testes proporcionais ao slice
 
 ---
 
 ## 9. Critérios de Review
 
-- as instruções por intenção ficaram explícitas e legíveis
-- o fluxo principal permaneceu simples e estável
-- o contrato externo do módulo `content` foi preservado
-- não houve expansão indevida de arquitetura
-- a mudança permaneceu incremental, pequena e revisável
-- os testes continuam cobrindo o comportamento esperado sem acoplamento desnecessário à forma interna
+- o fluxo de ingestion passou a consumir `extractPdf()` sem inflar a arquitetura
+- a integração está clara e explícita
+- não houve regressão no fluxo anterior
+- o boundary entre ingestion e shared/ai foi preservado
+- testes cobrem o novo comportamento
+- a PR permanece pequena e revisável
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] `summary` utiliza instrução explícita consolidada
-- [ ] `guidance` utiliza instrução explícita consolidada
-- [ ] `general` permanece com comportamento neutro
-- [ ] a preparação de conteúdo segue padronizada entre os agents
-- [ ] o endpoint atual permanece funcional sem mudanças externas
-- [ ] os testes passam sem regressão
+- [ ] ingestion utiliza `AiService.extractPdf()` no fluxo definido
+- [ ] o texto extraído segue para o processamento existente
+- [ ] testes do novo caminho estão passando
+- [ ] nenhum componente estrutural extra foi introduzido
+- [ ] suíte relacionada permanece verde
 
 ---
 
 ## 11. Conclusão
 
-A PR 45 consolida internamente a especialização introduzida nas PRs anteriores sem alterar a superfície pública do módulo. O ganho aqui é de clareza, previsibilidade e organização local da preparação por intenção.
-
-O recorte permanece pequeno, funcional e coerente com a fase atual. A arquitetura segue a mesma, o fluxo continua simples e a mudança evita tanto dispersão textual quanto a introdução prematura de uma camada de prompting mais ampla.
+A PR 45 aplica o primeiro consumo operacional do PDF extraction em um fluxo real da aplicação. O avanço reutiliza a base compartilhada construída anteriormente, mantém simplicidade e adiciona valor funcional concreto sem ampliar o desenho da fase.
