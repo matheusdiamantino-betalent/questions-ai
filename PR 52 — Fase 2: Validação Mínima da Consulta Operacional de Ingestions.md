@@ -1,4 +1,4 @@
-# 🧩 PR 52 — Fase 2: Validação Mínima da Consulta Operacional de Ingestions
+# ✅ PR 52 — Fase 2: Validação Mínima da Consulta Operacional de Ingestions
 ## Saneamento explícito de query params para listagem operacional com contratos previsíveis e seguros
 
 ---
