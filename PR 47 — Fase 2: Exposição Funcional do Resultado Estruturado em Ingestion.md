@@ -1,4 +1,4 @@
-# 🧩 PR 47 — Fase 2: Exposição Funcional do Resultado Estruturado em Ingestion
+# 📤 PR 47 — Fase 2: Exposição Funcional do Resultado Estruturado em Ingestion
 ## Retorno explícito de `extractedText` e `processedContent` na leitura da ingestion concluída
 
 ---
