@@ -1,4 +1,4 @@
-# 🧩 PR 44 — Fase 2: Execução Compartilhada Inicial do PDF Extraction Agent
+# 🚀 PR 44 — Fase 2: Execução Compartilhada Inicial do PDF Extraction Agent
 ## Primeiro consumo controlado do agent já introduzido na fase, sem ampliar a arquitetura existente
 
 ---
