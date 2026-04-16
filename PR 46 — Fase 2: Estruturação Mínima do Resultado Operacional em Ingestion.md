@@ -1,4 +1,4 @@
-# 🧩 PR 46 — Fase 2: Estruturação Mínima do Resultado Operacional em Ingestion
+# 🏗️ PR 46 — Fase 2: Estruturação Mínima do Resultado Operacional em Ingestion
 ## Persistência explícita de `extractedText` e `processedContent` após o primeiro consumo operacional do PDF extraction
 
 ---
