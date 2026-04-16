@@ -1,5 +1,5 @@
-# 🧩 PR 44 — Fase 2: Especialização Inicial de Resposta por Intenção nos Content Agents
-## Evolução mínima do comportamento dos agents após classificação estruturada já consolidada
+# 🧩 PR 44 — Fase 2: Execução Compartilhada Inicial do PDF Extraction Agent
+## Primeiro consumo controlado do agent já introduzido na fase, sem ampliar a arquitetura existente
 
 ---
 
@@ -7,8 +7,8 @@
 
 ![PR](https://img.shields.io/badge/PR-44-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-agent%20routing-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-especializacao%20de%20resposta-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-execucao%20compartilhada%20pdf%20agent-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,142 +16,145 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua o eixo validado nas PRs 42 e 43. Após introduzir agents básicos e estruturar a classificação de intenção, o próximo passo mínimo correto é diferenciar a preparação da resposta conforme a intenção já identificada.
+> Esta PR continua diretamente a PR 43. Após introduzir o primeiro agent funcional da fase, o próximo passo mínimo correto é permitir seu consumo controlado dentro do boundary compartilhado de IA, sem criar pipeline ou coordenação expandida.
 >
-> - preserva endpoint e contratos atuais
-> - mantém `ContentService` como owner do fluxo
-> - adiciona comportamento específico por agent
-> - aumenta utilidade sem nova arquitetura
-> - mantém mudança pequena e revisável
+> - adiciona ponto mínimo de uso do `PdfExtractionAgent`
+> - preserva o contrato já aprovado
+> - mantém a execução simples e explícita
+> - evita nova foundation ou abstração prematura
 >
-> **Este PR não adiciona planner, memória, tools externos, prompt engine genérica, múltiplas intenções ou nova API paralela.**
+> **Este PR não implementa router de agents, múltiplos executores, integração com `content`, `ClassificationAgent`, `SearchAgent` ou pipeline encadeado.**
 
 ---
 
 ## 📌 Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 ---
 
 ## 1. Síntese Executiva
 
-A PR 42 introduziu agents internos no boundary de `content`. A PR 43 qualificou a escolha entre eles com classificação estruturada de intenção. Com a decisão já organizada, o passo natural seguinte é fazer essa decisão produzir comportamento distinto e observável.
+A PR 42 consolidou o contrato base de agents em `shared/ai`. A PR 43 validou essa foundation com o primeiro agent concreto, o `PdfExtractionAgent`. Com isso resolvido, a progressão natural da fase é permitir que esse agent seja consumido por um ponto compartilhado de execução, ainda sem introduzir orquestração entre múltiplos agentes.
 
-A PR 44 especializa a preparação da resposta dentro de cada agent. Cada intenção passa a aplicar uma transformação mínima e explícita antes da execução final do fluxo, mantendo a mesma superfície pública e sem reabrir arquitetura.
+Esta PR entrega esse passo mínimo. O foco é transformar um agent isolado em capacidade reutilizável dentro do boundary compartilhado, mantendo leitura simples, baixo ruído e escopo pequeno.
 
 ---
 
 ## 2. Objetivo do PR
 
-- especializar resposta para intenção de resumo
-- especializar resposta para intenção de guidance
-- manter resposta neutra para intenção geral
-- preservar contrato externo existente
-- manter simplicidade operacional do fluxo
+- adicionar serviço mínimo para executar `PdfExtractionAgent`
+- centralizar o consumo inicial do agent em `shared/ai`
+- manter fluxo explícito e simples
+- validar comportamento com testes unitários
+- avançar a fase sem ampliar arquitetura
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A arquitetura atual é mantida. `ContentService` continua coordenando o fluxo, `ContentIntentClassifier` segue responsável pela leitura de intenção e `AgentRouter` permanece resolvendo o agent adequado.
+A arquitetura existente é mantida. Esta PR não cria registry, router, factory ou composition root expandido. A decisão central é apenas introduzir um ponto mínimo de consumo do agent já existente, permitindo reutilização controlada sem alterar os contratos da fase.
 
-A mudança desta PR ocorre apenas no comportamento interno dos agents, que deixam de ser pass-through e passam a aplicar instruções mínimas coerentes com cada intenção.
+O fluxo permanece linear: entrada recebida, delegação para o agent, retorno do resultado.
 
 ---
 
 ## 4. Escopo
 
-- ajustar `SummaryAgent` para preparar saída orientada a resumo
-- ajustar `GuidanceAgent` para preparar saída orientada a explicação ou passo a passo
-- manter `GeneralAgent` como fluxo neutro
-- preservar metadata atual do agent selecionado
-- atualizar testes unitários e de integração local
+- adicionar serviço compartilhado de execução do PDF extraction
+- injetar/instanciar `PdfExtractionAgent` de forma simples
+- expor método mínimo de uso
+- adicionar testes unitários do fluxo principal
+- preservar estrutura atual da fase
 
 ---
 
 ## 5. Fora de Escopo
 
-- prompt builder genérico
-- templates complexos
-- planner multi-step
-- múltiplas intenções simultâneas
-- confidence score
-- memória entre execuções
-- tools externas
-- novo endpoint funcional
-- mudança no contrato de resposta
+- múltiplos agents no mesmo fluxo
+- roteamento por intenção
+- registry dinâmico
+- factory de agents
+- integração com `content`
+- classification/search/id resolution
+- observabilidade expandida
+- retries, filas ou pipeline
 
 ---
 
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {'theme':'dark','themeVariables':{
+  'primaryColor':'#0f172a',
+  'primaryTextColor':'#e5e7eb',
+  'primaryBorderColor':'#22d3ee',
+  'lineColor':'#39ff14'
+}}}%%
 flowchart LR
-    A[Requisição Content] --> B[ContentService]
-    B --> C[IntentClassifier]
-    C --> D[AgentRouter]
-    D --> E[Agent Especializado]
-    E --> F[AiService]
-    F --> G[Resposta Final]
+    A["Input"] --> B["Ai Service"]
+    B --> C["PdfExtractionAgent"]
+    C --> D["Extracted Text"]
 ```
-
-A evolução permanece interna ao módulo e reutiliza a fundação já aprovada.
 
 ---
 
 ## 7. Contratos Mínimos
 
-Os contratos públicos permanecem os mesmos. Não há novos DTOs externos nem alteração de payload de entrada ou resposta.
+Os contratos existentes permanecem os mesmos. Esta PR apenas reutiliza:
 
-O recorte desta PR altera apenas a implementação interna de `execute(input: string): Promise<string>` dos agents existentes.
+```ts
+Agent<TInput, TOutput>
+PdfExtractionInput
+PdfExtractionOutput
+```
+
+Sem novos contratos globais para este slice.
 
 ---
 
 ## 8. Regras de Implementação
 
-- manter controller fino e sem regra de negócio
-- preservar `ContentService` como owner do fluxo
-- agents devem aplicar transformação simples e explícita
-- evitar abstrações antecipadas de prompting
-- não criar runtime paralelo entre agents
-- manter comportamento previsível e fácil de testar
-- adicionar apenas testes proporcionais ao slice
+- service fino e orientado ao fluxo principal
+- agent mantém responsabilidade de execução
+- sem abstrações adicionais
+- sem preparar próximos agents
+- sem alterar contrato base
+- testes objetivos e proporcionais ao recorte
 
 ---
 
 ## 9. Critérios de Review
 
-- agents agora possuem comportamento claramente distinto
-- fluxo principal permanece simples e legível
-- contrato externo de `content` foi preservado
-- não houve expansão indevida de arquitetura
-- mudança permaneceu incremental e revisável
-- testes cobrem especialização de comportamento
+- o consumo do agent foi centralizado sem inflar a arquitetura
+- o fluxo principal está claro
+- não houve acoplamento com domínio
+- contratos existentes foram preservados
+- testes cobrem a execução principal
+- a PR permanece pequena e revisável
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] summary produz preparação compatível com resumo
-- [ ] guidance produz preparação compatível com orientação
-- [ ] general mantém comportamento neutro
-- [ ] endpoint atual permanece funcional sem mudanças externas
-- [ ] metadata atual continua íntegra
-- [ ] testes passam cobrindo novo comportamento
+- [ ] existe serviço mínimo consumindo `PdfExtractionAgent`
+- [ ] o serviço retorna o output esperado do agent
+- [ ] testes unitários estão passando
+- [ ] nenhum componente extra desnecessário foi introduzido
+- [ ] suíte relacionada permanece verde
 
 ---
 
 ## 11. Conclusão
 
-A PR 44 transforma a classificação introduzida na PR 43 em comportamento efetivamente diferenciado por intenção. O ganho é funcional e interno, preservando simplicidade, compatibilidade e baixo ruído para review.
+A PR 44 continua a Fase 2 com o próximo passo mínimo após a criação do primeiro agent concreto: seu consumo compartilhado e controlado. O avanço preserva a arquitetura aprovada, mantém simplicidade e prepara a trilha sem antecipar coordenação maior entre agents.
