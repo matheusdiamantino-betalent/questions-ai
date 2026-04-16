@@ -1,4 +1,4 @@
-# 🧩 PR 50 — Fase 2: Consulta Operacional de Ingestions por Categoria
+# 📋 PR 50 — Fase 2: Consulta Operacional de Ingestions por Categoria
 ## Busca mínima de ingestions utilizando classificação semântica já persistida
 
 ---
