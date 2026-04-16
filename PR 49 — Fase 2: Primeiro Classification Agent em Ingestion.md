@@ -1,4 +1,4 @@
-# 🧩 PR 49 — Fase 2: Primeiro Classification Agent em Ingestion
+# 🏷️ PR 49 — Fase 2: Primeiro Classification Agent em Ingestion
 ## Enriquecimento semântico mínimo do resultado operacional com categoria e confiança
 
 ---
