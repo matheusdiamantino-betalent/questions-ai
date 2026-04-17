@@ -16,14 +16,13 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua a PR 53. Após fechar o fluxo básico entre agents, o próximo passo mínimo correto é extrair a coordenação da cadeia para uma unidade explícita de orquestração, mantendo o foco integral na fase de agents e sem reabrir ingestion.
+> Esta PR continua a linha evolutiva da PR 53. Após consolidar o fluxo básico entre agents, o próximo passo mínimo correto é explicitar a coordenação da cadeia em uma unidade própria, mantendo o foco integral na fase de agents e sem reabrir ingestion.
 >
-> - introduz ponto central simples de coordenação
-> - preserva agents especializados já existentes
-> - mantém fluxo linear, previsível e testável
-> - prepara evolução futura sem ampliar escopo atual
+> - introduz um ponto central simples de coordenação
+> - preserva os agents especializados já existentes
+> - mantém a execução linear, previsível e testável
 >
-> **Esta PR não integra com ingestion, não introduz LangGraph completo, não adiciona filas, retries ou paralelismo.**
+> **Este PR não toca ingestion, não introduz LangGraph completo, não adiciona filas, retries, paralelismo ou novas responsabilidades operacionais.**
 
 ---
 
@@ -45,48 +44,49 @@
 
 ## 1. Síntese Executiva
 
-As PRs 50 a 53 construíram progressivamente a cadeia funcional entre agents até o fechamento com answer key. O fluxo já entrega valor, porém a coordenação ainda permanece acoplada à composição direta.
+As PRs anteriores da Fase 2 fecharam progressivamente o fluxo básico entre agents até a composição funcional do resultado final. Esse encadeamento já existe e já entrega valor, mas a coordenação ainda permanece acoplada ao ponto de composição direta da cadeia.
 
-A PR 54 cria uma camada mínima de orquestração para centralizar a execução da cadeia atual sem alterar responsabilidades internas dos agents. O avanço mantém a fase focada em agents e evita antecipar integração operacional.
+A PR 54 introduz a primeira orquestração mínima desse fluxo, extraindo a sequência atual para uma unidade explícita e simples de coordenação. O recorte permanece estritamente na fase de agents, preserva os contratos já válidos e melhora a leitura do fluxo sem ampliar a arquitetura aprovada.
 
 ---
 
 ## 2. Objetivo do PR
 
-- criar orchestrator mínimo para o fluxo atual
-- delegar execução sequencial da cadeia existente
-- preservar contratos públicos já válidos
-- manter cobertura de testes do fluxo completo
-- separar coordenação de execução especializada
+- criar uma unidade mínima de orquestração para o fluxo básico atual
+- delegar a execução sequencial da cadeia já existente
+- preservar os contratos públicos já consolidados
+- manter o fluxo completo coberto por testes
+- separar coordenação de execução especializada sem redistribuir regra de negócio
 
 ---
 
 ## 3. Decisão Arquitetural
 
-Em vez de migrar diretamente para uma engine de estados ou ampliar a pipeline operacional, a coordenação nasce como serviço simples e explícito. A decisão reduz acoplamento entre composição e execução sem elevar complexidade desnecessária.
+A decisão desta PR é introduzir uma unidade explícita de orquestração, mas ainda em formato simples e linear. Em vez de antecipar engine de estados, pipeline operacional ou integração com ingestion, a coordenação passa a existir como um ponto central enxuto que apenas organiza a sequência já validada.
+
+Com isso, a arquitetura aprovada é mantida. Os agents continuam responsáveis pelo trabalho especializado que já executam, enquanto a nova unidade assume apenas a visibilidade e a organização do fluxo básico entre eles. O ganho aqui é clareza estrutural no recorte certo, sem inflar a solução.
 
 ---
 
 ## 4. Escopo
 
-- criar unidade de orquestração da fase
-- consumir fluxo básico já existente
-- retornar resultado final tipado
-- ajustar providers necessários
-- adicionar testes dedicados
+- criar a unidade mínima de orquestração da fase
+- consumir o fluxo básico já existente entre agents
+- retornar o resultado final tipado da cadeia atual
+- ajustar providers e composição apenas no necessário para o novo ponto de coordenação
+- adicionar ou adaptar testes focados na coordenação explícita do fluxo
 
 ---
 
 ## 5. Fora de Escopo
 
-- IngestionProcessor
-- filas e workers adicionais
-- LangGraph operacional
-- persistência nova
-- observabilidade avançada
-- retries
-- paralelização
-- novos agents funcionais
+- qualquer integração com ingestion
+- LangGraph operacional ou grafo de estados completo
+- filas, workers, retries ou paralelismo
+- nova persistência ou alteração de storage
+- observabilidade expandida
+- criação de novos agents funcionais
+- redistribuição indevida de responsabilidades já estabilizadas
 
 ---
 
@@ -102,10 +102,17 @@ Em vez de migrar diretamente para uma engine de estados ou ampliar a pipeline op
 'tertiaryColor':'#0b1220'
 }}}%%
 flowchart LR
-A[Question Input] --> B[AgentsFlowOrchestrator]
-B --> C[InitialQuestionProcessingAgent]
-C --> D[Metadata + IDs + Legal + Statement + AnswerKey]
+    A[Question Input] --> B[AgentsFlowOrchestrator]
+    B --> C[InitialQuestionProcessingAgent]
+    C --> D[Classification]
+    D --> E[Id Resolution]
+    E --> F[Legal Search]
+    F --> G[Statement Adaptation]
+    G --> H[Answer Key]
+    H --> I[Structured Output]
 ```
+
+O diagrama representa apenas o fluxo principal desta PR: a coordenação deixa de ficar implícita na composição direta e passa a existir em um ponto central visível, sem alterar a natureza linear da cadeia.
 
 ---
 
@@ -117,33 +124,40 @@ export type AgentsFlowInput = InitialQuestionProcessingInput;
 export type AgentsFlowOutput = InitialQuestionProcessingOutput;
 ```
 
-Sem expansão contratual nesta etapa. A mudança principal é organizacional e de coordenação.
+Nesta etapa, a mudança principal é de coordenação. O contrato funcional do fluxo permanece o mesmo, evitando expansão indevida de modelagem ou reabertura de interface já estabilizada.
 
 ---
 
 ## 8. Regras de Implementação
 
-Controller inexistente nesta fase. A nova unidade deve apenas coordenar chamadas e repassar resultados. Nenhuma regra de negócio deve ser duplicada do fluxo já existente. Preferir código explícito e baixo número de abstrações.
+A nova unidade deve ser apenas um ponto explícito de coordenação. Ela não deve absorver regra de negócio dos agents, duplicar transformação de dados nem introduzir abstrações auxiliares que não sejam exigidas pelo recorte. O fluxo precisa continuar visível, linear e fácil de revisar.
+
+A implementação deve manter controller inexistente nesta fase, service simples, composição direta e responsabilidade especializada preservada em cada agent. Qualquer mudança além disso foge do objetivo desta PR.
 
 ---
 
 ## 9. Critérios de Review
 
-Validar se a coordenação ficou clara, se não houve regressão no fluxo atual, se responsabilidades permaneceram separadas e se a PR adiciona organização real sem inflar arquitetura.
+Validar se a nova orquestração realmente melhora a clareza do fluxo sem alterar o comportamento funcional já consolidado. Confirmar que os agents permanecem com responsabilidades especializadas, que a coordenação não introduz acoplamento desnecessário e que não houve expansão arquitetural além do recorte.
+
+Também é importante verificar se o fluxo ficou mais explícito sem exigir navegação excessiva e se a documentação permanece proporcional a uma mudança pequena e revisável.
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] orchestrator mínimo criado
-- [ ] fluxo atual executado através da nova unidade
-- [ ] resultado final preservado
-- [ ] testes cobrindo coordenação
-- [ ] nenhuma alteração em ingestion
-- [ ] nenhuma complexidade indevida adicionada
+- [ ] existe uma unidade mínima de orquestração para o fluxo básico entre agents
+- [ ] o fluxo atual passa a ser executado por essa nova unidade
+- [ ] o resultado final da cadeia permanece preservado
+- [ ] os contratos públicos continuam estáveis nesta etapa
+- [ ] há testes cobrindo a coordenação explícita do fluxo
+- [ ] ingestion permanece intocado
+- [ ] nenhuma complexidade indevida foi adicionada
 
 ---
 
 ## 11. Conclusão
 
-A PR 54 abre a próxima etapa natural da Fase 2 ao introduzir coordenação explícita sobre a cadeia já consolidada. O ganho é estrutural e funcional na medida certa: melhor separação de responsabilidades, mesma simplicidade operacional e continuidade coerente do roadmap.
+A PR 54 representa a continuação natural da Fase 2 após o fechamento do fluxo básico entre agents. Em vez de ampliar a arquitetura ou antecipar integração operacional, ela apenas explicita a coordenação da cadeia atual no menor recorte útil.
+
+O resultado é um fluxo mais claro e melhor posicionado para revisão e evolução incremental, preservando a simplicidade da implementação, os contratos já estabilizados e o limite arquitetural já aprovado para esta fase.
