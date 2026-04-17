@@ -1,5 +1,5 @@
-# 📄 PR 51 — Fase 2: Paginação Mínima da Consulta Operacional de Ingestions
-## Controle de volume e ordenação previsível para a listagem criada na PR 50
+# ⚖️ PR 51 — Fase 2: Primeira Composição Funcional Mínima com Busca Legal
+## Inclusão incremental do LegalSearchAgent após classificação e resolução de IDs sem ampliar a pipeline operacional
 
 ---
 
@@ -8,7 +8,7 @@
 ![PR](https://img.shields.io/badge/PR-51-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-pagination%20query%20ingestions-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-composicao%20com%20busca%20legal-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,14 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua diretamente a PR 50. Após disponibilizar consulta operacional por categoria, o próximo passo mínimo correto é controlar volume de retorno e garantir ordenação previsível, sem alterar o pipeline de processamento e sem ampliar a arquitetura da fase.
+> Esta PR continua diretamente a PR 50. Após validar a composição mínima entre classificação e resolução de IDs, o próximo passo correto é enriquecer esse fluxo com a etapa de busca legal. O objetivo é conectar a questão processada à sua referência normativa de forma simples, previsível e testável, sem reabrir ingestion e sem introduzir orquestração complexa.
 >
-> - adiciona paginação mínima
-> - define ordenação padrão consistente
-> - melhora consumo da API em escala inicial
-> - preserva recorte pequeno e revisável
+> - adiciona `LegalSearchAgent` ao fluxo já existente
+> - amplia valor funcional sem inflar a arquitetura
+> - mantém composição sequencial e leitura simples
+> - preserva o boundary de agents como eixo principal da fase
 >
-> **Esta PR não implementa cursor pagination, analytics, dashboard, cache distribuído ou filtros complexos adicionais.**
+> **Este PR não implementa LangGraph operacional, integração com ingestion, adaptação de enunciado, geração de gabarito, retries distribuídos ou pipeline final de questões.**
 
 ---
 
@@ -45,52 +45,56 @@
 
 ## 1. Síntese Executiva
 
-A PR 50 introduziu capacidade de consulta operacional por categoria utilizando a classificação semântica já persistida. Esse passo tornou os dados consultáveis, porém ainda sem controle explícito de volume e sem um padrão formal de ordenação para retornos maiores.
+A PR 50 comprovou que os agents já consolidados na fase conseguem operar em cadeia mínima entre classificação e resolução de IDs. Esse passo validou composição funcional real sem abrir nova arquitetura.
 
-A PR 51 amadurece essa capacidade com o próximo passo mínimo correto: paginação simples baseada em `limit` e `offset`, acompanhada de ordenação previsível. O objetivo é manter a consulta útil e sustentável conforme o volume cresce, sem recorrer a soluções prematuras.
+A PR 51 adiciona a próxima evolução incremental: após classificar e resolver os identificadores necessários, o fluxo passa a executar a busca legal. O resultado continua pequeno e revisável, mas agora entrega contexto normativo associado à questão processada.
 
 ---
 
 ## 2. Objetivo do PR
 
-- adicionar `limit` e `offset` na listagem
-- definir ordenação padrão por data de criação
-- retornar metadados mínimos de paginação
-- preservar filtros já existentes
-- atualizar testes de controller, service e DAO
+- incluir `LegalSearchAgent` na composição existente
+- manter `ClassificationAgent` como primeira etapa
+- manter `IdResolutionAgent` como segunda etapa
+- executar busca legal como próxima etapa sequencial
+- retornar output agregado com `metadata`, `ids` e `legalSearch`
+- validar a cadeia completa por testes
+- preservar isolamento da pipeline operacional atual
 
 ---
 
 ## 3. Decisão Arquitetural
 
-Não há mudança estrutural nesta PR. A evolução permanece nas camadas já existentes: controller, service e DAO.
+A arquitetura aprovada é mantida. Em vez de introduzir orchestrator dedicado ou state machine, a evolução ocorre no mesmo fluxo simples já criado na PR 50, adicionando apenas a próxima etapa funcional necessária.
 
-A decisão central é amadurecer a consulta criada anteriormente sem introduzir soluções avançadas prematuras como cursor pagination, engines externas de busca ou componentes paralelos. O recorte permanece simples, local e revisável.
+A decisão preserva o princípio do projeto: evoluir por composições pequenas e reais antes de sofisticar coordenação.
 
 ---
 
 ## 4. Escopo
 
-- aceitar `limit` via query param
-- aceitar `offset` via query param
-- aplicar `order by createdAt desc` por padrão
-- retornar `items`, `total`, `limit` e `offset`
-- manter filtros por categoria e status
-- atualizar testes automatizados
+- evoluir o agent de composição atual
+- injetar `LegalSearchAgent`
+- manter etapas anteriores inalteradas
+- executar busca legal após classificação e resolução
+- agregar resultado da busca no output final
+- adicionar testes cobrindo o novo encadeamento
+- manter providers consistentes no módulo atual
 
 ---
 
 ## 5. Fora de Escopo
 
-- cursor pagination
-- multi-sort avançado
-- filtros dinâmicos complexos
-- exportação CSV
-- dashboard analítico
-- cache distribuído
-- agregações estatísticas
-- alterações no pipeline de ingestion
-- mudanças na classificação semântica
+- integração com `IngestionProcessor`
+- integração com `ContentService`
+- `StatementNormalizationAgent` no fluxo principal
+- `AnswerKeyAgent` no fluxo principal
+- LangGraph operacional
+- persistência externa nova
+- observabilidade expandida
+- retries e DLQ
+- paralelização de etapas
+- pipeline final de geração de questões
 
 ---
 
@@ -106,84 +110,64 @@ A decisão central é amadurecer a consulta criada anteriormente sem introduzir 
   'tertiaryColor':'#0b1220'
 }}}%%
 flowchart LR
-    A[Cliente] --> B[GET /ingestion?limit=10&offset=0]
-    B --> C[IngestionController]
-    C --> D[IngestionService.findMany]
-    D --> E[IngestionDao.findMany]
-    E --> F[items + total + metadata]
+    A[ExtractedQuestion] --> B[ClassificationAgent]
+    B --> C[QuestionMetadata]
+    C --> D[IdResolutionAgent]
+    D --> E[ResolvedIds]
+    E --> F[LegalSearchAgent]
+    F --> G[LegalSearchResult]
+    C --> H[Output Agregado]
+    E --> H
+    G --> H
 ```
 
 ---
 
 ## 7. Contratos Mínimos
 
-A consulta passa a aceitar parâmetros mínimos de paginação e retorna metadados suficientes para navegação inicial.
-
 ```ts
-export type FindIngestionsQuery = {
-  category?: string;
-  status?: IngestionStatus;
-  limit?: number;
-  offset?: number;
-};
-
-export type PaginatedIngestionsResponse = {
-  items: IngestionListItem[];
-  total: number;
-  limit: number;
-  offset: number;
+export type InitialQuestionProcessingOutput = {
+  metadata: QuestionMetadata;
+  ids: ResolvedIds;
+  legalSearch: LegalSearchResult | null;
 };
 ```
 
-Exemplo esperado:
-
-```json
-{
-  "items": [
-    {
-      "id": "ing-1",
-      "status": "completed",
-      "category": "financeiro"
-    }
-  ],
-  "total": 42,
-  "limit": 10,
-  "offset": 0
-}
-```
+Os contratos existentes permanecem os mesmos. Esta PR apenas amplia o output da composição para incluir o resultado mínimo da busca legal.
 
 ---
 
 ## 8. Regras de Implementação
 
-A paginação deve ser objetiva e previsível. Definir defaults razoáveis e limites máximos simples para evitar abuso, mantendo comportamento claro quando parâmetros não forem enviados.
+O fluxo deve continuar explícito e sequencial. A responsabilidade da composição permanece restrita a coordenar chamadas entre agents e devolver o resultado agregado, sem absorver persistência, sem criar abstrações genéricas de pipeline e sem preparar etapas futuras.
 
-Evitar abstrações genéricas de paginação, helpers excessivos ou frameworks internos desnecessários se o recorte puder ser resolvido diretamente no módulo atual.
+A busca legal deve consumir somente os dados necessários produzidos nas etapas anteriores. Falhas devem emergir de forma transparente, mantendo diagnóstica simples e baixo custo de manutenção.
 
 ---
 
 ## 9. Critérios de Review
 
-Validar se a paginação ficou simples, se a ordenação padrão é consistente e se o contrato de resposta atende o uso operacional sem complexidade desnecessária.
+Validar se a PR continua diretamente a 50, se o recorte segue pequeno e se a inclusão de `LegalSearchAgent` realmente adiciona valor funcional sem inflar a solução.
 
-Confirmar também a preservação dos filtros já existentes e a ausência de expansão indevida de escopo.
+Confirmar também que a cadeia está clara, que os testes cobrem a nova etapa e que não houve expansão indevida para ingestion, LangGraph ou pipeline maior.
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] `limit` está funcionando
-- [ ] `offset` está funcionando
-- [ ] ordenação padrão foi aplicada
-- [ ] retorno inclui metadata mínima
-- [ ] filtros anteriores foram preservados
-- [ ] testes atualizados e passando
-- [ ] nenhum componente estrutural novo foi criado
+- [ ] `LegalSearchAgent` foi integrado ao fluxo atual
+- [ ] classificação continua executando primeiro
+- [ ] resolução de IDs continua recebendo os metadados corretos
+- [ ] busca legal executa após as etapas anteriores
+- [ ] output final retorna `metadata`, `ids` e `legalSearch`
+- [ ] testes cobrem a cadeia completa
+- [ ] nenhuma alteração indevida em ingestion
+- [ ] nenhuma orquestração complexa foi adicionada
 
 ---
 
 ## 11. Conclusão
 
-A PR 51 amadurece a capacidade consultiva introduzida na PR 50 ao adicionar paginação mínima e previsibilidade de retorno. A listagem passa a escalar melhor dentro do volume inicial esperado, mantendo leitura simples e contrato claro.
+A PR 51 evolui a composição mínima da PR 50 para um fluxo funcional mais útil ao domínio, conectando a questão processada ao seu contexto legal. O ganho vem por uma única etapa adicional, sem ampliar desnecessariamente a arquitetura.
 
-O avanço segue incremental, útil e alinhado à estratégia da fase: consolidar valor real antes de abrir novas frentes arquiteturais.
+O recorte permanece pequeno, coerente com a fase e alinhado ao histórico incremental do projeto.
