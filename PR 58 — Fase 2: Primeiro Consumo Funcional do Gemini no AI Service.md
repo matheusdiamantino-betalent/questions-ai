@@ -1,4 +1,4 @@
-# 🧩 PR 58 — Fase 2: Primeiro Consumo Funcional do Gemini no AI Service
+# 🤖 PR 58 — Fase 2: Primeiro Consumo Funcional do Gemini no AI Service
 ## Introdução controlada de provider alternativo validando integração real sem expandir a arquitetura
 
 ---
