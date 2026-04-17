@@ -1,4 +1,4 @@
-# 🧩 PR 55 — Fase 2: Primeiro Consumo Funcional do Orchestrator Básico entre Agents
+# # 🎛️ PR 55 — Fase 2: Primeiro Consumo Funcional do Orchestrator Básico entre Agents
 ## Adoção controlada do ponto explícito de coordenação no fluxo atual sem reabrir a composição interna dos agents
 
 ---
@@ -16,14 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua diretamente a PR 54. Após introduzir a unidade explícita de coordenação do fluxo básico entre agents, o próximo passo mínimo correto é colocá-la em uso real por um consumidor da fase, mantendo a composição interna atual e sem ampliar a arquitetura aprovada.
+> Esta PR continua diretamente a PR 54. Após introduzir o ponto explícito de coordenação do fluxo básico entre agents, o próximo passo mínimo correto é colocá-lo em uso por um consumidor real da fase, preservando a composição interna atual e sem ampliar a arquitetura já aprovada.
 >
-> - conecta um consumidor real ao orchestrator
+> - conecta um consumidor real ao `AgentsFlowOrchestratorService`
 > - preserva a cadeia funcional existente
 > - mantém contratos públicos estáveis
-> - valida adoção funcional com baixo impacto estrutural
+> - valida a adoção funcional com baixo impacto estrutural
 >
-> **Este PR não desmonta o InitialQuestionProcessingAgent, não toca ingestion, não introduz LangGraph operacional, filas, retries ou paralelismo.**
+> **Este PR não desmonta o `InitialQuestionProcessingAgent`, não toca ingestion, não introduz LangGraph operacional, filas, retries ou paralelismo.**
 
 ---
 
@@ -45,49 +45,49 @@
 
 ## 1. Síntese Executiva
 
-A PR 54 criou o ponto explícito de coordenação do fluxo básico entre agents por meio do `AgentsFlowOrchestratorService`, mantendo intacta a composição funcional já consolidada no `InitialQuestionProcessingAgent`.
+A PR 54 introduziu o `AgentsFlowOrchestratorService` como ponto explícito de coordenação do fluxo básico entre agents, sem alterar a composição funcional já consolidada no `InitialQuestionProcessingAgent`. A arquitetura da fase permaneceu a mesma, mas passou a contar com uma unidade mais clara de entrada para coordenação.
 
-A PR 55 transforma essa base em uso efetivo. O recorte desta etapa é simples: substituir o consumo direto do fluxo anterior pelo orchestrator no boundary correto da fase, sem reabrir a cadeia interna, sem alterar contratos e sem expandir responsabilidades.
+A PR 55 é a continuação natural desse movimento. Em vez de manter o orchestrator apenas como estrutura disponível, esta etapa o coloca em uso real no boundary correto, substituindo o consumo direto anterior pelo novo ponto de coordenação. O ganho aqui não está em expandir comportamento, mas em consolidar adoção funcional mínima com risco baixo, contratos estáveis e continuidade arquitetural explícita.
 
 ---
 
 ## 2. Objetivo do PR
 
 - conectar um consumidor real ao `AgentsFlowOrchestratorService`
-- substituir o acesso direto ao fluxo anterior pelo novo ponto de coordenação
-- preservar input e output já estabilizados
-- ajustar testes do consumidor impactado
-- consolidar adoção funcional da orquestração mínima
+- substituir o consumo direto anterior pelo orchestrator
+- preservar os contratos de entrada e saída já estabilizados
+- ajustar o wiring necessário no módulo impactado
+- adaptar os testes do consumidor ao novo ponto de entrada
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão desta PR é priorizar adoção incremental sobre refactor amplo. Em vez de redistribuir os steps internos entre múltiplos pontos de execução, o sistema passa primeiro a consumir a unidade de coordenação criada na PR anterior.
+A decisão central desta PR é adotar o orchestrator antes de reestruturar qualquer composição interna. A arquitetura aprovada é mantida e o recorte se limita a trocar o ponto de consumo do fluxo atual por uma coordenação explícita já introduzida na etapa anterior.
 
-Isso mantém a arquitetura aprovada, reduz risco de mudança desnecessária e transforma uma fundação estrutural em comportamento real no menor recorte útil possível.
+Com isso, o projeto transforma a base criada na PR 54 em uso funcional real sem abrir refactor paralelo, sem redistribuir responsabilidades entre services e sem antecipar uma orquestração mais sofisticada do que a fase pede agora.
 
 ---
 
 ## 4. Escopo
 
-- identificar o boundary atual que consome o fluxo básico da fase
-- substituir a dependência direta anterior pelo orchestrator
-- manter contratos existentes em `shared/ai/model/v1`
-- ajustar wiring necessário no módulo atual
-- adaptar testes relacionados ao novo ponto de entrada
+- identificar o boundary atual que consome o fluxo básico entre agents
+- substituir a dependência direta anterior pelo `AgentsFlowOrchestratorService`
+- manter os contratos existentes em `shared/ai/model/v1`
+- ajustar o wiring do módulo que passa a consumir o orchestrator
+- adaptar os testes relacionados ao novo ponto de entrada
 
 ---
 
 ## 5. Fora de Escopo
 
 - refactor interno do `InitialQuestionProcessingAgent`
-- redistribuição step-by-step da cadeia entre services
-- qualquer integração com ingestion
+- redistribuição step-by-step da cadeia entre múltiplos services
+- criação de novos agents funcionais
+- alterações em ingestion
 - LangGraph operacional
 - filas, workers, retries ou paralelismo
-- novos agents funcionais
-- expansão contratual desnecessária
+- expansão contratual além do necessário para o consumo atual
 
 ---
 
@@ -109,7 +109,7 @@ flowchart LR
     D --> E[Structured Output]
 ```
 
-O foco desta PR é a troca controlada do ponto de consumo. A cadeia interna permanece a mesma e o ganho está na adoção funcional da coordenação explícita.
+O fluxo permanece simples. A mudança desta PR está no ponto explícito de entrada: o consumidor deixa de acessar diretamente a composição anterior e passa a consumir o orchestrator, enquanto a cadeia interna continua preservada.
 
 ---
 
@@ -120,40 +120,40 @@ InitialQuestionProcessingInput
 InitialQuestionProcessingOutput
 ```
 
-Os contratos permanecem os mesmos nesta etapa. A mudança ocorre no ponto de entrada do fluxo, não na interface funcional já estabilizada.
+Os contratos permanecem os mesmos nesta etapa. A mudança ocorre no ponto de coordenação consumido pelo boundary, e não na interface funcional já estabilizada entre entrada e saída.
 
 ---
 
 ## 8. Regras de Implementação
 
-O consumidor ajustado deve apenas trocar a dependência para o orchestrator e continuar operando com os mesmos dados de entrada e saída. Nenhuma regra de negócio deve migrar para o boundary consumidor.
+O boundary ajustado deve apenas consumir o `AgentsFlowOrchestratorService` e continuar operando com os mesmos dados de entrada e saída. Nenhuma regra de negócio adicional deve ser deslocada para controller, service consumidor ou módulo apenas para justificar a troca do ponto de entrada.
 
-O orchestrator continua fino e o `InitialQuestionProcessingAgent` permanece como composição funcional atual até que exista motivo real para nova evolução arquitetural.
+O orchestrator deve permanecer fino, exercendo coordenação explícita sem absorver responsabilidades que ainda pertencem à composição atual. O `InitialQuestionProcessingAgent` continua como núcleo funcional existente até que uma próxima evolução real exija outra reorganização, e não antes disso.
 
 ---
 
 ## 9. Critérios de Review
 
-Validar se o consumo direto anterior foi corretamente substituído pelo orchestrator, se não houve regressão funcional, se os contratos permaneceram estáveis e se a mudança entrega adoção real com impacto mínimo.
+Validar se o consumidor real da fase passou a usar o `AgentsFlowOrchestratorService`, se a dependência direta anterior foi removida do boundary ajustado e se o fluxo continua funcional sem alteração contratual indevida.
 
-Confirmar também que a PR não aproveita o ajuste para introduzir refactors paralelos fora do recorte.
+Também deve ser verificado se a PR manteve o recorte pequeno, se evitou refactors paralelos e se a adoção do orchestrator ocorreu como continuidade controlada da PR 54, sem inflar arquitetura ou espalhar responsabilidades novas pelo módulo.
 
 ---
 
 ## 10. Critérios de Aceite
 
 - [ ] existe consumidor real usando `AgentsFlowOrchestratorService`
-- [ ] dependência direta anterior foi removida do boundary ajustado
-- [ ] input e output permanecem compatíveis
-- [ ] testes foram adaptados com sucesso
-- [ ] nenhuma alteração em ingestion
-- [ ] nenhuma complexidade indevida foi adicionada
+- [ ] o consumo direto anterior foi removido do boundary ajustado
+- [ ] input e output permanecem compatíveis com o fluxo atual
+- [ ] o wiring necessário foi ajustado sem expansão arquitetural paralela
+- [ ] os testes do consumidor impactado foram adaptados com sucesso
+- [ ] não houve alteração em ingestion
+- [ ] nenhuma complexidade indevida foi adicionada ao fluxo
 
 ---
 
 ## 11. Conclusão
 
-A PR 55 conclui o passo natural iniciado na PR 54: a coordenação explícita deixa de ser apenas estrutura e passa a ser parte real do fluxo da fase. O avanço é pequeno, controlado e coerente com a estratégia incremental do projeto.
+A PR 55 converte em uso real a coordenação explícita introduzida na PR 54. O avanço é pequeno, direto e coerente com a linha incremental do projeto: um novo ponto de entrada passa a ser efetivamente consumido sem reabrir a composição interna já aprovada.
 
-Com isso, a base evolui com clareza, preservando simplicidade, contratos existentes e o limite arquitetural adequado para este momento.
-
+Com isso, a fase evolui com mais clareza operacional, preservando simplicidade, contratos estáveis e controle de escopo. O resultado é uma adoção funcional mínima, revisável e alinhada ao padrão arquitetural já consolidado no Questions-IA.
