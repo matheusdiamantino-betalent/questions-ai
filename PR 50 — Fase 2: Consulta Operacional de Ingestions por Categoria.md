@@ -1,5 +1,5 @@
-# 📋 PR 50 — Fase 2: Consulta Operacional de Ingestions por Categoria
-## Busca mínima de ingestions utilizando classificação semântica já persistida
+# 🔗 PR 50 — Fase 2: Primeira Composição Funcional Mínima entre Agents
+## Encadeamento inicial entre classificação e resolução de IDs sem tocar a pipeline de ingestion
 
 ---
 
@@ -8,7 +8,7 @@
 ![PR](https://img.shields.io/badge/PR-50-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-query%20ingestions%20por%20categoria-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-composicao%20inicial%20agents-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,14 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR continua diretamente a PR 49. Após enriquecer a ingestion com classificação mínima, o próximo passo correto é transformar esse dado em capacidade consultável, permitindo busca operacional simples por categoria sem expandir a arquitetura da fase.
+> Esta PR continua diretamente a PR 49. Após consolidar os agents como unidades isoladas, o próximo passo mínimo correto é provar composição funcional entre eles. O foco é encadear classificação e resolução de IDs em um fluxo simples, previsível e testável, sem reabrir ingestion e sem introduzir orquestração prematura.
 >
-> - adiciona consulta por categoria
-> - reutiliza metadados já persistidos
-> - cria valor operacional imediato
-> - mantém recorte pequeno e revisável
+> - compõe agents já existentes em fluxo único
+> - transforma peças isoladas em capacidade funcional mínima
+> - mantém baixo acoplamento e leitura simples
+> - preserva o boundary de agents como eixo principal da fase
 >
-> **Esta PR não implementa paginação avançada, dashboard, analytics, full text search, vector search ou filtros complexos.**
+> **Este PR não implementa LangGraph completo, integração com ingestion, múltiplos fluxos paralelos, retry distribuído ou pipeline final de geração de questões.**
 
 ---
 
@@ -45,52 +45,55 @@
 
 ## 1. Síntese Executiva
 
-A PR 49 introduziu classificação semântica mínima no resultado da ingestion. A partir desse ponto, o sistema passou a possuir informação categorizada persistida, porém ainda sem uma forma direta de consulta operacional orientada a esse dado.
+A PR 49 consolidou os agents como unidades isoladas, com contratos claros, implementações iniciais e cobertura mínima. O próximo passo funcional correto agora é deixar de tratá-los apenas como peças independentes e provar que conseguem operar em sequência com um resultado agregado simples.
 
-Esta PR converte esse enriquecimento em utilidade prática ao adicionar uma listagem simples filtrável por categoria. O ganho é imediato para inspeção operacional e organização de ingestions, mantendo a evolução incremental e sem ampliar a base arquitetural já aprovada.
+A PR 50 introduz essa primeira composição mínima. Uma questão extraída passa pela classificação para gerar metadados e, na sequência, pela resolução de IDs baseada nesses metadados. O avanço é pequeno, direto e suficiente para validar o primeiro encadeamento funcional da fase sem tocar a pipeline de ingestion.
 
 ---
 
 ## 2. Objetivo do PR
 
-- permitir busca de ingestions por categoria
-- aceitar combinação opcional com status
-- expor endpoint mínimo de listagem
-- reutilizar contratos e estruturas já existentes quando possível
-- validar o fluxo com testes objetivos e proporcionais ao recorte
+- criar um fluxo mínimo de composição entre agents já existentes
+- executar `ClassificationAgent` como primeira etapa do encadeamento
+- executar `IdResolutionAgent` consumindo a saída da classificação
+- retornar um resultado agregado contendo `metadata` e `ids`
+- validar integração e ordem de execução por testes
+- manter o recorte isolado da pipeline atual de ingestion
 
 ---
 
 ## 3. Decisão Arquitetural
 
-Não há mudança estrutural nesta PR. A evolução permanece dentro das camadas já consolidadas: controller, service e DAO.
+A arquitetura já aprovada é mantida. Esta PR não reabre a fase nem introduz um orchestrator mais amplo. A decisão central é materializar a primeira composição funcional como uma unidade simples, explícita e focada apenas no fluxo atual entre classificação e resolução de IDs.
 
-A decisão central é adicionar capacidade consultiva mínima sobre dados já disponíveis, sem introduzir motores de busca, cache, agregadores ou novas dependências. O foco é consulta simples sobre valor que o sistema já produz e persiste.
+Com isso, o projeto valida encadeamento real antes de avançar para coordenação mais sofisticada. A escolha segue a linha já consolidada no histórico da fase: conectar e consolidar antes de orquestrar.
 
 ---
 
 ## 4. Escopo
 
-- criar endpoint `GET /ingestion`
-- aceitar filtro `category`
-- aceitar filtro opcional `status`
-- adicionar `findMany` no DAO
-- retornar lista simplificada de resultados
-- atualizar testes de controller, service e DAO
+- criar um agent de composição inicial, como `initial-question-processing.agent.ts` ou equivalente aderente ao módulo
+- injetar `ClassificationAgent`
+- injetar `IdResolutionAgent`
+- executar as etapas de forma sequencial e explícita
+- expor output agregado tipado
+- adicionar testes cobrindo fluxo completo e ordem básica de execução
+- manter providers consistentes com o módulo atual de agents
 
 ---
 
 ## 5. Fora de Escopo
 
-- paginação avançada
-- ordenação avançada
-- full text search
-- vector search
-- dashboard analítico
-- exportação CSV
-- filtros compostos complexos
-- cache distribuído
-- agregações estatísticas
+- integração com `IngestionProcessor`
+- integração com a pipeline operacional de ingestion
+- inclusão de `LegalSearchAgent` no fluxo principal
+- inclusão de `StatementAdaptationAgent` no fluxo principal
+- inclusão de `AnswerKeyAgent` no fluxo principal
+- adoção de LangGraph ou state machine
+- paralelização de etapas
+- persistência externa nova
+- observabilidade expandida
+- retries, DLQ ou coordenação distribuída
 
 ---
 
@@ -106,77 +109,84 @@ A decisão central é adicionar capacidade consultiva mínima sobre dados já di
   'tertiaryColor':'#0b1220'
 }}}%%
 flowchart LR
-    A[Cliente] --> B[GET /ingestion?category=x]
-    B --> C[IngestionController]
-    C --> D[IngestionService.findMany]
-    D --> E[IngestionDao.findMany]
-    E --> F[Listagem filtrada]
+    A[ExtractedQuestion] --> B[ClassificationAgent]
+    B --> C[QuestionMetadata]
+    C --> D[IdResolutionAgent]
+    D --> E[ResolvedIds]
+    C --> F[Output Agregado]
+    E --> F
 ```
+
+O fluxo desta PR é propositalmente curto. A entrada continua restrita a uma questão já extraída, a classificação produz os metadados mínimos e a resolução de IDs fecha a composição com um resultado agregado único, sem camadas adicionais de coordenação.
 
 ---
 
 ## 7. Contratos Mínimos
 
-A listagem introduz filtros pequenos e um retorno objetivo, suficiente para uso operacional inicial.
-
 ```ts
-export type FindIngestionsFilters = {
-  category?: string;
-  status?: IngestionStatus;
+export type InitialQuestionProcessingInput = {
+  question: ExtractedQuestion;
 };
 
-export type IngestionListItem = {
-  id: string;
-  status: IngestionStatus;
-  category: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+export type InitialQuestionProcessingOutput = {
+  metadata: QuestionMetadata;
+  ids: ResolvedIds;
 };
 ```
+
+Os contratos dos agents já existentes permanecem os mesmos. Esta PR adiciona apenas o contrato mínimo da composição, suficiente para representar a entrada do fluxo e o resultado agregado final.
 
 Exemplo esperado:
 
 ```json
-[
-  {
-    "id": "ing-1",
-    "status": "completed",
-    "category": "financeiro"
+{
+  "metadata": {
+    "article": "Art. 1º",
+    "law": "Lei 6.015/73",
+    "bank": "IESES",
+    "year": 2026
+  },
+  "ids": {
+    "bankId": "bank-1",
+    "lawId": "law-1",
+    "articleId": "article-1",
+    "yearId": "year-2026"
   }
-]
+}
 ```
 
 ---
 
 ## 8. Regras de Implementação
 
-A implementação deve priorizar simplicidade: query direta no banco, filtros opcionais e retorno enxuto. Evitar builders complexos, repositories genéricos, abstrações prematuras ou camadas adicionais sem necessidade real.
+O fluxo deve ser explícito, sequencial e fácil de ler. Controller fino, quando houver ponto de exposição nesta fase, e agent de composição simples, sem abstrações genéricas de pipeline, sem factory de steps e sem fundação paralela para futuras composições.
 
-Se nenhum filtro for informado, o comportamento pode seguir a decisão mínima adotada pelo projeto, desde que permaneça explícito, previsível e simples de revisar.
+A responsabilidade da composição deve se limitar a coordenar a chamada do `ClassificationAgent`, repassar a saída ao `IdResolutionAgent` e devolver o resultado agregado. Persistência continua fora desse agent, e qualquer falha deve emergir de forma transparente, preservando diagnóstica simples e baixo custo de manutenção.
 
 ---
 
 ## 9. Critérios de Review
 
-Validar se a consulta ficou simples, previsível e aderente ao recorte proposto. Confirmar que filtros funcionam sem inflar a complexidade do DAO e que a resposta entregue é suficiente para uso operacional inicial.
+Validar se a PR realmente representa continuação direta da 49 e se o recorte permanece pequeno. O reviewer deve conseguir verificar rapidamente que houve composição funcional real entre agents, sem expansão indevida para ingestion, LangGraph ou pipeline maior.
 
-Também deve ser observado se não houve expansão indevida de escopo para funcionalidades analíticas ou mecanismos de busca fora desta etapa.
+Também deve ser confirmado que a implementação mantém baixo acoplamento, usa injeção de dependências de forma direta, protege a ordem do fluxo por testes e não adiciona abstrações que antecipem fases ainda não abertas.
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] endpoint de listagem foi criado
-- [ ] filtro por categoria está funcionando
-- [ ] filtro por status opcional está funcionando
-- [ ] DAO suporta consulta mínima proposta
-- [ ] testes foram atualizados e permanecem passando
-- [ ] nenhum componente estrutural novo foi criado
+- [ ] existe um fluxo de composição inicial entre `ClassificationAgent` e `IdResolutionAgent`
+- [ ] `ClassificationAgent` executa antes de `IdResolutionAgent`
+- [ ] `IdResolutionAgent` consome os metadados gerados pela etapa anterior
+- [ ] o resultado final retorna `metadata` e `ids` em output agregado tipado
+- [ ] os testes cobrem o fluxo completo e a ordem básica da composição
+- [ ] não há alteração indevida na pipeline de ingestion
+- [ ] não foi introduzida orquestração complexa ou infraestrutura paralela
 
 ---
 
 ## 11. Conclusão
 
-A PR 50 transforma a classificação introduzida anteriormente em capacidade operacional real. O sistema passa a permitir consulta simples por categoria sobre dados já enriquecidos e persistidos.
+A PR 50 transforma a base isolada consolidada na PR 49 em uma capacidade funcional mínima entre agents. O ganho aqui não é ampliar a arquitetura, mas provar que as peças já criadas conseguem operar em cadeia simples, com resultado previsível e revisável.
 
-O avanço segue incremental, útil e contido. Não há aumento artificial de complexidade, apenas uso prático de uma informação que a plataforma já passou a produzir na etapa anterior.
+O recorte permanece pequeno, coerente com a fase e alinhado ao histórico do projeto. A entrega adiciona o próximo passo mínimo correto sem antecipar pipeline maior, mantendo a evolução controlada e a leitura confortável para review.
