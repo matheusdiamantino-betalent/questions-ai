@@ -1,5 +1,5 @@
 # ⚖️ PR 51 — Fase 2: Primeira Composição Funcional Mínima com Busca Legal
-## Inclusão incremental do LegalSearchAgent após classificação e resolução de IDs sem ampliar a pipeline operacional
+## Inclusão incremental do `LegalSearchAgent` após classificação e resolução de IDs sem ampliar a pipeline operacional
 
 ---
 
@@ -45,41 +45,43 @@
 
 ## 1. Síntese Executiva
 
-A PR 50 comprovou que os agents já consolidados na fase conseguem operar em cadeia mínima entre classificação e resolução de IDs. Esse passo validou composição funcional real sem abrir nova arquitetura.
+A PR 50 comprovou a composição funcional mínima entre `ClassificationAgent` e `IdResolutionAgent`, validando que a fase de agents básicos já consegue produzir encadeamento útil sem abrir coordenação mais sofisticada.
 
-A PR 51 adiciona a próxima evolução incremental: após classificar e resolver os identificadores necessários, o fluxo passa a executar a busca legal. O resultado continua pequeno e revisável, mas agora entrega contexto normativo associado à questão processada.
+A PR 51 avança exatamente um passo além desse ponto. Após classificar a questão e resolver os identificadores derivados do metadata, o fluxo passa a executar a busca legal como terceira etapa sequencial. O ganho é direto: a composição deixa de apenas estruturar e identificar a questão e passa também a associá-la ao contexto normativo correspondente, sem alterar os boundaries já estabilizados.
+
+Esse é o próximo passo mínimo correto porque adiciona valor funcional real ao fluxo atual, preservando simplicidade, previsibilidade e baixo custo de review.
 
 ---
 
 ## 2. Objetivo do PR
 
-- incluir `LegalSearchAgent` na composição existente
-- manter `ClassificationAgent` como primeira etapa
-- manter `IdResolutionAgent` como segunda etapa
-- executar busca legal como próxima etapa sequencial
+- incluir `LegalSearchAgent` na composição funcional atual
+- preservar `ClassificationAgent` como primeira etapa do fluxo
+- preservar `IdResolutionAgent` como segunda etapa do fluxo
+- executar a busca legal após a resolução de IDs
 - retornar output agregado com `metadata`, `ids` e `legalSearch`
 - validar a cadeia completa por testes
-- preservar isolamento da pipeline operacional atual
+- manter a evolução isolada da pipeline operacional de ingestion
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A arquitetura aprovada é mantida. Em vez de introduzir orchestrator dedicado ou state machine, a evolução ocorre no mesmo fluxo simples já criado na PR 50, adicionando apenas a próxima etapa funcional necessária.
+A arquitetura já aprovada é mantida integralmente. Esta PR não introduz orchestrator dedicado, state machine, composição genérica de steps nem nova camada de coordenação. A decisão central é evoluir o mesmo fluxo explícito da PR 50 com apenas mais uma etapa funcional, mantendo a composição como um encadeamento direto entre agents.
 
-A decisão preserva o princípio do projeto: evoluir por composições pequenas e reais antes de sofisticar coordenação.
+Com isso, a fase continua avançando por slices reais e pequenos: primeiro a composição entre classificação e resolução, agora a inclusão da busca legal sobre o resultado já estruturado. O desenho permanece visível, fácil de revisar e proporcional ao estágio atual do projeto.
 
 ---
 
 ## 4. Escopo
 
-- evoluir o agent de composição atual
-- injetar `LegalSearchAgent`
-- manter etapas anteriores inalteradas
-- executar busca legal após classificação e resolução
-- agregar resultado da busca no output final
+- evoluir o fluxo de composição atual
+- injetar `LegalSearchAgent` no mesmo boundary já existente
+- manter classificação e resolução de IDs como etapas anteriores inalteradas
+- executar busca legal após a obtenção dos identificadores necessários
+- agregar o resultado da busca ao output final da composição
 - adicionar testes cobrindo o novo encadeamento
-- manter providers consistentes no módulo atual
+- manter providers e wiring consistentes no módulo atual
 
 ---
 
@@ -87,12 +89,12 @@ A decisão preserva o princípio do projeto: evoluir por composições pequenas 
 
 - integração com `IngestionProcessor`
 - integração com `ContentService`
-- `StatementNormalizationAgent` no fluxo principal
-- `AnswerKeyAgent` no fluxo principal
+- inclusão de `StatementNormalizationAgent` no fluxo principal
+- inclusão de `AnswerKeyAgent` no fluxo principal
 - LangGraph operacional
-- persistência externa nova
+- persistência adicional
 - observabilidade expandida
-- retries e DLQ
+- retries, DLQ e coordenação distribuída
 - paralelização de etapas
 - pipeline final de geração de questões
 
@@ -121,6 +123,8 @@ flowchart LR
     G --> H
 ```
 
+O fluxo permanece linear e explícito. A composição recebe a questão já extraída, classifica, resolve identificadores e então executa a busca legal antes de consolidar o output final. Não há bifurcação operacional nova nem ampliação indevida do processo.
+
 ---
 
 ## 7. Contratos Mínimos
@@ -133,41 +137,41 @@ export type InitialQuestionProcessingOutput = {
 };
 ```
 
-Os contratos existentes permanecem os mesmos. Esta PR apenas amplia o output da composição para incluir o resultado mínimo da busca legal.
+Os contratos anteriores permanecem válidos. Esta PR apenas amplia o output mínimo da composição para incluir `legalSearch`, sem remodelar os tipos já aprovados e sem introduzir contrato paralelo de pipeline.
 
 ---
 
 ## 8. Regras de Implementação
 
-O fluxo deve continuar explícito e sequencial. A responsabilidade da composição permanece restrita a coordenar chamadas entre agents e devolver o resultado agregado, sem absorver persistência, sem criar abstrações genéricas de pipeline e sem preparar etapas futuras.
+A composição deve continuar restrita à coordenação sequencial entre agents, com fluxo totalmente visível no ponto de uso. O papel dessa camada é apenas encadear chamadas, repassar os dados mínimos necessários entre etapas e devolver o resultado agregado da execução.
 
-A busca legal deve consumir somente os dados necessários produzidos nas etapas anteriores. Falhas devem emergir de forma transparente, mantendo diagnóstica simples e baixo custo de manutenção.
+`LegalSearchAgent` deve consumir exclusivamente os dados derivados das etapas anteriores, sem absorver responsabilidades externas ao seu recorte. Não deve haver abstração genérica para steps, preparação de futuras composições, fundação paralela para orchestrator nem acoplamento com ingestion. Quando houver falha, ela deve emergir de forma simples e rastreável, preservando diagnóstica direta e manutenção barata.
 
 ---
 
 ## 9. Critérios de Review
 
-Validar se a PR continua diretamente a 50, se o recorte segue pequeno e se a inclusão de `LegalSearchAgent` realmente adiciona valor funcional sem inflar a solução.
+Validar se a PR continua diretamente a 50 e se a inclusão de `LegalSearchAgent` representa apenas a próxima evolução mínima do fluxo, sem transformar a composição em mecanismo mais amplo do que o necessário.
 
-Confirmar também que a cadeia está clara, que os testes cobrem a nova etapa e que não houve expansão indevida para ingestion, LangGraph ou pipeline maior.
+Confirmar também que a cadeia segue clara e explícita, que o resultado agregado está consistente com o recorte, que os testes cobrem a nova etapa e que não houve expansão para ingestion, LangGraph, normalização de enunciado, geração de gabarito ou outras fases ainda não abertas.
 
 ---
 
 ## 10. Critérios de Aceite
 
-- [ ] `LegalSearchAgent` foi integrado ao fluxo atual
-- [ ] classificação continua executando primeiro
-- [ ] resolução de IDs continua recebendo os metadados corretos
+- [ ] `LegalSearchAgent` foi integrado ao fluxo atual de composição
+- [ ] classificação continua executando como primeira etapa
+- [ ] resolução de IDs continua executando como segunda etapa
 - [ ] busca legal executa após as etapas anteriores
 - [ ] output final retorna `metadata`, `ids` e `legalSearch`
-- [ ] testes cobrem a cadeia completa
-- [ ] nenhuma alteração indevida em ingestion
+- [ ] testes cobrem a cadeia completa com a nova etapa
+- [ ] nenhuma alteração indevida foi feita em ingestion
 - [ ] nenhuma orquestração complexa foi adicionada
 
 ---
 
 ## 11. Conclusão
 
-A PR 51 evolui a composição mínima da PR 50 para um fluxo funcional mais útil ao domínio, conectando a questão processada ao seu contexto legal. O ganho vem por uma única etapa adicional, sem ampliar desnecessariamente a arquitetura.
+A PR 51 amplia a composição mínima validada na PR 50 com a primeira inclusão funcional de busca legal no encadeamento de agents. O ganho é objetivo: além de classificar e estruturar a questão, o fluxo passa a anexar referência normativa ao resultado processado.
 
-O recorte permanece pequeno, coerente com a fase e alinhado ao histórico incremental do projeto.
+A evolução permanece pequena, coesa e alinhada à fase. Não há redesenho, nem antecipação de pipeline maior. Há apenas o próximo passo funcional mínimo, incorporado com simplicidade e baixo ruído para review.
