@@ -1,4 +1,4 @@
-# 🤖 PR 62 — Fase 2: Foundation de Resolução de IDs via DAO
+# 🗂️ PR 62 — Fase 2: Foundation de Resolução de IDs via DAO
 ## Preparação controlada do boundary de persistência sem expandir o fluxo atual
 
 ---
