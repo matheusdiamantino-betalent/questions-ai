@@ -8,104 +8,112 @@
 ![PR](https://img.shields.io/badge/PR-58-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-agents%20basicos-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-primeiro%20consumo%20gemini%20no%20ai%20service-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-primeiro%20consumo%20gemini%20no%20runtime%20existente-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
----
-
 > [!IMPORTANT]
-> Esta PR introduz o primeiro consumo funcional do Gemini dentro do runtime já existente do `AiService`, reaproveitando a arquitetura atual e limitando a mudança ao recorte mínimo necessário para validar execução real.
+> Esta PR introduz o primeiro consumo funcional do Gemini dentro do runtime já existente, preservando o `AiService`, mantendo o `LangGraphLib` como ponto de execução e limitando a mudança ao recorte mínimo necessário para validar integração real.
 >
-> - adiciona configuração mínima e versionada para uso do Gemini
-> - integra um `GeminiService` simples ao fluxo atual do `AiService`
-> - valida sucesso e falha sem abrir uma arquitetura multi-provider completa nesta etapa
+> - adiciona `GeminiService` como integração concreta com provider externo
+> - redireciona o `LangGraphLib` para executar via Gemini
+> - preserva contratos atuais do `AiService`
+> - valida sucesso e falha com cobertura automatizada
 >
-> **Este PR não transforma o `AiService` em um orquestrador de múltiplos providers, não adiciona fallback automático e não antecipa abstrações que ainda não foram exigidas pelo slice atual.**
+> **Esta PR não cria arquitetura multi-provider, não adiciona fallback automático e não expande o desenho além do necessário.**
 
 ---
 
 ## Sumário
-
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 ---
 
 ## 1. Síntese Executiva
 
-A PR anterior validou a conectividade mínima com o Gemini como integração externa isolada, sem ainda posicioná-lo no fluxo regular de execução do runtime. O próximo passo mínimo correto, portanto, é comprovar que esse provider alternativo consegue ser consumido de forma funcional a partir do `AiService`, preservando o desenho já aprovado e sem reabrir a arquitetura.
+A etapa anterior validou conectividade mínima com o Gemini. O próximo passo correto era comprovar consumo funcional real dentro do runtime já existente, sem reabrir a arquitetura.
 
-Esta PR faz exatamente esse avanço. O runtime atual continua o mesmo, o contrato público permanece controlado e a mudança fica concentrada na introdução da configuração necessária, na execução encapsulada via `GeminiService` e na integração mínima com o `AiService`. O objetivo não é resolver multi-provider como iniciativa completa, mas apenas confirmar que a aplicação já consegue consumir o Gemini de ponta a ponta dentro da base existente.
+A implementação final manteve o `AiService` intacto como fachada principal, preservou o `LangGraphLib` no fluxo e substituiu apenas o executor interno por `GeminiService`. Com isso, o sistema passa a usar Gemini em execução real sem alterar contratos superiores nem espalhar mudanças pelo projeto.
 
-Com isso, o projeto passa a ter uma validação funcional real de provider alternativo, ainda em recorte pequeno, revisável e proporcional à fase atual.
+---
 
 ## 2. Objetivo do PR
 
-- Permitir que o `AiService` execute prompt usando Gemini dentro do runtime atual.
-- Garantir leitura segura de `GEMINI_API_KEY` e `GEMINI_MODEL` pelo environment centralizado.
-- Normalizar a resposta mínima do provider para consumo interno consistente.
-- Tornar falhas de integração explícitas sem mascarar erro externo.
-- Validar o fluxo principal com teste unitário cobrindo sucesso e falha.
+- Integrar Gemini ao runtime atual.
+- Manter `AiService` e fluxo de knowledge context existentes.
+- Reaproveitar `LangGraphLib` como ponto de execução.
+- Garantir tratamento explícito de erro.
+- Cobrir caminho principal e falhas relevantes com testes.
+
+---
 
 ## 3. Decisão Arquitetural
 
-A decisão central desta PR é manter a arquitetura aprovada e adicionar apenas o próximo passo funcional mínimo dentro dela. Em vez de antecipar uma camada de abstração genérica para múltiplos providers, o projeto passa primeiro pela validação operacional concreta do Gemini como dependência externa real integrada ao `AiService`.
+A decisão adotada foi evolutiva e conservadora:
 
-Na prática, isso significa introduzir um `GeminiService` simples, com responsabilidade objetiva de executar a chamada ao provider e devolver um resultado mínimo normalizado, enquanto o `AiService` permanece como ponto de consumo dentro do runtime já consolidado. Essa escolha preserva a visibilidade do fluxo, reduz risco de abstração prematura e evita que uma necessidade ainda não estabilizada gere expansão estrutural desnecessária.
+- `AiService` permanece responsável pelo fluxo de negócio atual.
+- `LangGraphLib` permanece como boundary de execução.
+- `GeminiService` assume a integração HTTP com o provider.
+- Nenhuma abstração genérica adicional foi introduzida.
+
+Isso reduz risco, mantém legibilidade e evita sobreengenharia.
+
+---
 
 ## 4. Escopo
 
-- inclusão de `GEMINI_API_KEY` e `GEMINI_MODEL` no environment centralizado
-- ajuste do schema de configuração para suportar o novo provider
-- criação do `GeminiService` com contrato mínimo de execução
-- tratamento básico de erro para resposta inválida ou falha externa
-- integração mínima do `GeminiService` ao `AiService`
-- cobertura unitária do fluxo principal de sucesso e falha
+- criação de `GeminiService`
+- validação de prompt vazio
+- chamada ao endpoint Gemini
+- normalização de resposta textual
+- erro explícito para falha externa ou output vazio
+- ajuste do `LangGraphLib` para delegar ao Gemini
+- manutenção do `AiService`
+- atualização dos testes automatizados
+- ajuste do script de conectividade
+
+---
 
 ## 5. Fora de Escopo
 
-- seleção dinâmica de provider por request
-- arquitetura multi-provider completa
-- fallback automático entre providers
-- política de retry avançada
-- métricas, telemetria ou comparação entre providers
+- seleção dinâmica de provider
+- múltiplos providers simultâneos
+- fallback entre modelos
+- retry avançado
+- métricas comparativas
 - cache por provider
-- alteração ampla de contratos públicos além do estritamente necessário para o slice
+- refactor amplo do runtime
+
+---
 
 ## 6. Fluxo Arquitetural
 
 ```mermaid
 flowchart TD
     A[Request interno] --> B[AiService]
-    B --> C[GeminiService]
-    C --> D[Gemini API]
-    D --> E[Resposta mínima normalizada]
-    E --> B
+    B --> C[LangGraphLib]
+    C --> D[GeminiService]
+    D --> E[Gemini API]
+    E --> F[Output normalizado]
+    F --> B
 ```
 
-O fluxo permanece deliberadamente curto. O `AiService` continua como ponto de entrada do runtime atual e delega a execução ao `GeminiService`, que encapsula a comunicação externa com o provider. Após a resposta do Gemini, o retorno é normalizado no menor formato necessário para reutilização local, sem introduzir camadas paralelas ou coordenação adicional.
+---
 
 ## 7. Contratos Mínimos
 
-Os contratos públicos não são expandidos além do necessário para suportar o novo consumo. O acréscimo principal desta PR está na configuração centralizada e no contrato mínimo interno de execução do provider.
-
 ```ts
-export const Env = {
-  GEMINI_API_KEY: 'string',
-  GEMINI_MODEL: 'string',
-};
-
 export type GeminiExecuteInput = {
   prompt: string;
 };
@@ -115,32 +123,46 @@ export type GeminiExecuteOutput = {
 };
 ```
 
-A intenção aqui é manter o contrato enxuto: prompt entra, texto útil sai. Qualquer enriquecimento adicional de payload, estratégia de provider ou metadata comparativa fica explicitamente fora deste recorte.
+Entrada simples, saída simples.
+
+---
 
 ## 8. Regras de Implementação
 
-A implementação deve preservar o mesmo princípio de simplicidade que guiou os slices anteriores. O environment continua centralizado; o `GeminiService` deve concentrar apenas a comunicação com o provider e a normalização mínima do retorno; e o `AiService` deve integrar esse consumo sem se transformar, nesta PR, em camada de seleção sofisticada de providers.
+- prompt vazio falha explicitamente
+- erro HTTP externo falha explicitamente
+- output vazio é inválido
+- `AiService` não sofre expansão estrutural
+- knowledge context continua funcionando
+- testes preservam regressão zero
 
-Também é esperado que prompt vazio falhe de forma explícita, que output vazio seja tratado como resposta inválida e que erros externos sejam normalizados apenas no nível necessário para manter clareza operacional. Não entram abstrações genéricas, factories, mapeadores extras ou fundações paralelas preparatórias.
+---
 
 ## 9. Critérios de Review
 
-O review deve validar se a PR realmente permaneceu no recorte mínimo correto: integração real do Gemini, configuração consistente no environment, fluxo visível dentro do `AiService`, tratamento básico de erro e cobertura unitária suficiente para sucesso e falha. Também deve ser observado se a solução evitou antecipar arquitetura multi-provider, fallback, telemetria ou abstrações ainda não exigidas.
+Validar se:
 
-Em especial, esta PR só está alinhada ao padrão do projeto se a leitura do fluxo continuar simples, se o acoplamento permanecer baixo sem abstração ornamental e se a documentação e a implementação estiverem proporcionais ao tamanho real da entrega.
+- Gemini entrou no runtime real
+- fluxo segue simples
+- `AiService` permaneceu estável
+- `LangGraphLib` delega corretamente
+- testes cobrem sucesso e falha
+- não houve abstração prematura
+
+---
 
 ## 10. Critérios de Aceite
 
-- [ ] a aplicação reconhece `GEMINI_API_KEY` e `GEMINI_MODEL` pelo environment centralizado
-- [ ] o `GeminiService` executa chamada funcional ao provider e devolve output mínimo normalizado
-- [ ] o `AiService` passa a consumir o Gemini no fluxo previsto por esta PR
-- [ ] prompt inválido ou output vazio falham de forma explícita
-- [ ] erro externo do provider é tratado sem ocultar a falha operacional
-- [ ] testes unitários cobrem pelo menos o caminho principal de sucesso e um cenário de falha
-- [ ] o fluxo atual permanece simples, sem regressão indevida e sem expansão arquitetural além do slice
+- [x] `GeminiService` executa provider real
+- [x] `LangGraphLib` usa Gemini
+- [x] `AiService` permanece funcional
+- [x] prompt inválido falha
+- [x] output vazio falha
+- [x] erro externo é propagado
+- [x] suíte de testes aprovada
+
+---
 
 ## 11. Conclusão
 
-A PR 58 avança de uma validação isolada de conectividade para o primeiro consumo funcional real do Gemini dentro do `AiService`. O ganho entregue é objetivo: o projeto confirma que a base atual consegue integrar um provider alternativo em execução real, mantendo o fluxo controlado e sem reabrir a arquitetura para um desenho multi-provider antes da hora.
-
-Trata-se, portanto, de uma continuação direta da etapa anterior, com recorte pequeno, impacto previsível e alinhamento explícito ao padrão de evolução incremental do Questions-IA.
+A PR 58 entregou o primeiro consumo funcional real do Gemini dentro do runtime existente com recorte pequeno, impacto controlado e preservação da arquitetura atual. O avanço foi incremental, testado e proporcional à fase do projeto.
