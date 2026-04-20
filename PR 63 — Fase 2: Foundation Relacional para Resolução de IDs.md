@@ -1,4 +1,4 @@
-# 🤖 PR 63 — Fase 2: Foundation Relacional para Resolução de IDs
+# 🗄️ PR 63 — Fase 2: Foundation Relacional para Resolução de IDs
 ## Preparação mínima do schema de referência para viabilizar lookup real sem expandir o fluxo atual
 
 ---
