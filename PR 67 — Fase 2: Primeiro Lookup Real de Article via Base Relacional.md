@@ -1,5 +1,5 @@
-# 🔎 PR 67 — Fase 2: Primeiro Lookup Real de Article via Base Relacional
-## Ativação inicial da resolução persistida de artigos sobre a foundation introduzida na PR 66
+# ⚖️ PR 67 — Fase 2: Primeira Resolução Real de SubMatter na Base Principal
+## Ativação funcional mínima da classificação jurídica existente no legado sem fundação paralela
 
 ---
 
@@ -8,7 +8,7 @@
 ![PR](https://img.shields.io/badge/PR-67-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-lookup%20real%20de%20article-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-submatter%20lookup-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-ready%20for%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,13 +16,14 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR consome a foundation relacional criada na PR 66 ativando o primeiro lookup real de `article`.
+> Esta PR transforma o próximo passo da Fase 2 em uma entrega funcional ancorada no legado real.
 >
-> - implementa consulta persistida de artigo no DAO
-> - retorna `articleId` real quando houver correspondência
-> - preserva fallback atual quando não houver match
+> - ativa a primeira resolução real de `subMatter` na base principal
+> - usa taxonomia já comprovada no legado (`disciplines`, `matters`, `sub_matters`)
+> - evita modelagem especulativa de entidades não comprovadas
+> - preserva o recorte pequeno, revisável e diretamente útil ao pipeline atual
 >
-> **Este PR não introduz fuzzy matching, aliases, cache ou novas estratégias de resolução.**
+> **Este PR não cria persistência local nova, não altera contratos externos e não introduz platform foundation multi-agent.**
 
 ## Sumário
 
@@ -40,44 +41,54 @@
 
 ## 1. Síntese Executiva
 
-A PR 66 introduziu a estrutura relacional mínima para `article`, separando foundation de consumo funcional. O próximo passo natural é utilizar essa base recém-criada no fluxo principal de resolução de IDs.
+A sequência recente da Fase 2 consolidou um boundary mais aderente ao sistema principal. A PR 63 removeu catálogo relacional local indevido. A PR 64 ativou o primeiro lookup real via base principal. A PR 65 elevou a taxa de match com normalização determinística antes da consulta. A PR 66 corrigiu o enquadramento do recorte ao eliminar premissas sobre estruturas não comprovadas no legado.
 
-Esta entrega ativa o primeiro lookup real de artigos, mantendo o desenho atual entre `IdResolutionAgent` e `IdResolutionDao`, retornando IDs persistidos quando houver match válido e preservando fallback previsível nos demais casos.
+Com esse histórico estabilizado, o próximo passo correto não é abrir foundation genérica de agents nem insistir em entidades normativas sem fonte de verdade comprovada. O passo incremental correto é ativar valor funcional sobre uma taxonomia já existente no legado: `disciplines`, `matters`, `sub_matters` e sua associação com `questions`.
+
+Esta PR faz exatamente isso ao introduzir a primeira resolução real de `subMatter` na base principal, mantendo o fluxo atual e adicionando apenas o mínimo necessário para produzir um ID juridicamente classificatório aderente ao modelo já persistido.
 
 ## 2. Objetivo do PR
 
-- implementar query real para `article` no `IdResolutionDao`
-- retornar `articleId` persistido quando houver match
-- manter fallback atual quando não houver correspondência
-- preservar dependência de `article` em relação ao `lawId` resolvido
-- validar a evolução com testes objetivos
+- ativar a primeira resolução real de `subMatter` na base principal
+- aproveitar a taxonomia jurídica já comprovada no legado
+- retornar `subMatterId` a partir de classificação textual normalizada
+- manter o pipeline atual sem inflar escopo estrutural
+- reforçar aderência ao boundary correto da Fase 2
 
 ## 3. Decisão Arquitetural
 
-A arquitetura existente é mantida. O `IdResolutionAgent` continua orquestrando o fluxo e o `IdResolutionDao` permanece como boundary de persistência. A mudança desta PR é restrita à ativação da consulta real de `article` usando a foundation introduzida na PR 66.
+A decisão arquitetural desta PR é fazer a próxima evolução funcional exclusivamente sobre entidades reais do legado. O domínio de classificação jurídica já expõe estrutura persistida suficiente para um passo incremental útil: `disciplines`, `matters`, `sub_matters` e `question_sub_matters`.
 
-Não há novas camadas, não há alteração contratual e não há expansão indevida do fluxo atual.
+A escolha por `subMatter` preserva o padrão correto do projeto por quatro razões:
+
+- evolui em cima de fonte de verdade comprovada
+- evita fundação paralela e modelagem especulativa
+- adiciona valor funcional imediato ao pipeline de resolução
+- mantém o recorte proporcional ao estágio atual do sistema
+
+O objetivo aqui não é resolver toda a taxonomia com heurísticas amplas, nem redesenhar a arquitetura de agents. O objetivo é validar o caminho mínimo real de lookup classificatório a partir da base principal.
 
 ## 4. Escopo
 
-- implementação de query real para `article`
-- lookup por `lawId` + `number`
-- retorno de `articleId` real quando encontrado
-- fallback atual quando não encontrado
-- manutenção da dependência entre `law` e `article`
-- testes cobrindo match, no-match e guarda de dependência
+- introduzir lookup real de `subMatter` na base principal
+- definir a assinatura mínima de entrada para a resolução
+- integrar a resolução ao `IdResolutionAgent` apenas no ponto necessário
+- adicionar ou ajustar método correspondente no `IdResolutionDao`
+- retornar `subMatterId` quando houver match determinístico
+- manter testes e validações proporcionais ao slice
 
 ## 5. Fora de Escopo
 
-- fuzzy matching de artigo
-- aliases de artigo
-- score de confiança
+- criação de novas tabelas locais
+- migrations
+- lookup de `law` ou `article`
+- fuzzy matching
+- aliases
+- heurísticas avançadas de desambiguação
 - cache Redis
-- múltiplas estratégias paralelas
-- heurísticas adicionais
-- alteração de contratos externos
-- expansão para `year`
-- mudanças fora do fluxo de `article`
+- expansão de contratos externos
+- refatoração para platform foundation multi-agent
+- generalização prematura de agent registry, router ou APIs genéricas
 
 ## 6. Fluxo Arquitetural
 
@@ -102,12 +113,11 @@ Não há novas camadas, não há alteração contratual e não há expansão ind
   }
 }}%%
 flowchart LR
-    A["Metadata"] --> B["Law resolvida"]
-    B --> C["IdResolutionAgent"]
-    C --> D["IdResolutionDao"]
-    D --> E["articles"]
-    E --> F["articleId real ou fallback"]
-    F --> G["ResolvedIds"]
+    A["Classificação textual normalizada"] --> B["IdResolutionAgent"]
+    B --> C["IdResolutionDao"]
+    C --> D["Lookup real em sub_matters"]
+    D --> E["Retorno de subMatterId"]
+    E --> F["Pipeline segue com classificação resolvida"]
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
@@ -115,7 +125,6 @@ flowchart LR
     classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
     classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
     classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
-    classDef step7 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
 
     class A step1;
     class B step2;
@@ -123,57 +132,67 @@ flowchart LR
     class D step4;
     class E step5;
     class F step6;
-    class G step7;
 
     linkStyle 0 stroke:#9ca3af,stroke-width:2px;
     linkStyle 1 stroke:#9ca3af,stroke-width:2px;
     linkStyle 2 stroke:#9ca3af,stroke-width:2px;
     linkStyle 3 stroke:#9ca3af,stroke-width:2px;
     linkStyle 4 stroke:#9ca3af,stroke-width:2px;
-    linkStyle 5 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ## 7. Contratos Mínimos
 
-Os contratos externos permanecem inalterados.
+Contratos externos permanecem inalterados nesta PR.
+
+Esta etapa introduz apenas o contrato interno mínimo necessário para a primeira resolução real de `subMatter`:
 
 ```ts
-export interface ResolvedIds {
-  lawId?: string | null;
-  articleId?: string | null;
-  bankId?: string | null;
-  yearId?: string | null;
-}
+type ResolveSubMatterInput = {
+  normalizedSubMatterName: string;
+};
+```
+
+Caso o legado exija desambiguação mínima por contexto classificatório, a evolução pode admitir apoio de `matter` ou `discipline` em etapas futuras. Nesta PR, o foco permanece no menor contrato capaz de validar o caminho real de lookup.
+
+Saída esperada do slice:
+
+```ts
+type ResolveSubMatterOutput = {
+  subMatterId: string | null;
+};
 ```
 
 ## 8. Regras de Implementação
 
-- query simples e legível para `article`
-- `IdResolutionAgent` continua sem SQL
-- `IdResolutionDao` concentra persistência
-- lookup de artigo depende de `lawId` resolvido
-- fallback preservado
-- sem antecipar próximos passos da fase
+- não criar persistência local nova
+- não inventar entidade fora do legado comprovado
+- manter `IdResolutionAgent` sem SQL
+- concentrar acesso à base principal no `IdResolutionDao`
+- introduzir apenas um lookup determinístico mínimo
+- evitar abstrações genéricas não exigidas pelo slice
+- preservar baixo ruído estrutural e facilidade de review
 
 ## 9. Critérios de Review
 
-- lookup real de `article` está encapsulado no DAO
-- boundary entre agent e DAO foi mantido
-- ausência de overengineering
-- fallback continua previsível
-- dependência entre `law` e `article` permanece clara
-- testes cobrem match, no-match e guarda de dependência
-- documentação permanece proporcional ao slice
+- a PR evolui sobre entidade real do legado
+- o lookup de `subMatter` foi implementado no boundary correto
+- o passo continua pequeno e tecnicamente revisável
+- não há fundação paralela nem modelagem especulativa
+- `IdResolutionAgent` continua enxuto
+- `IdResolutionDao` concentra a consulta real
+- documentação e testes permanecem proporcionais ao recorte
 
 ## 10. Critérios de Aceite
 
-- [ ] DAO consulta base relacional para `article`
-- [ ] `articleId` real retorna quando houver match válido
-- [ ] no-match mantém fallback atual
-- [ ] sem `lawId` resolvido não há lookup persistido de artigo
-- [ ] contrato externo permanece compatível
-- [ ] suíte de testes verde
+- [ ] o sistema passa a resolver `subMatterId` real na base principal
+- [ ] nenhuma persistência local nova foi criada
+- [ ] nenhum contrato externo foi alterado
+- [ ] o fluxo atual permaneceu íntegro
+- [ ] suíte de testes permanece verde
+- [ ] a PR entrega valor funcional concreto sem inflar a arquitetura
 
 ## 11. Conclusão
 
-A PR 67 consome a foundation criada na PR 66 ativando a resolução persistida de artigos no fluxo já existente. O ganho funcional é direto, pequeno e aderente ao desenho atual, sem expansão indevida de escopo ou arquitetura.
+A PR 67 segue a linha correta da Fase 2 ao trocar especulação por aderência ao legado. Em vez de abrir uma foundation genérica de agents ou insistir em entidades sem fonte de verdade comprovada, o projeto adiciona uma capacidade funcional real sobre a taxonomia jurídica já existente.
+
+O resultado é uma entrega pequena, objetiva e útil: a primeira resolução real de `subMatter` na base principal, construída no boundary correto e sem overengineering.
