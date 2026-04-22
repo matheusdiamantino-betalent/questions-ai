@@ -1,5 +1,5 @@
-# 🔎 PR 65 — Fase 2: Normalização Determinística para Lookup Relacional
-## Evolução incremental do lookup real com aumento controlado de match persistido
+# 🔎 PR 65 — Fase 2: Normalização Determinística para Lookup Real na Base Principal
+## Evolução incremental da resolução de IDs com aumento controlado de match sem duplicação local
 
 ---
 
@@ -16,37 +16,37 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR evolui o lookup real entregue na PR 64 com uma etapa mínima de normalização antes da consulta relacional.
+> Esta PR evolui o lookup real entregue na PR 64 com uma etapa mínima de normalização antes da consulta à base principal.
 >
 > - reduz falhas por variações superficiais de entrada
 > - aumenta o reaproveitamento do match persistido
-> - preserva contrato externo, fallback e arquitetura atual
+> - preserva contrato externo, fallback e boundary atual
 >
-> **Este PR não introduz fuzzy matching, cache, aliases extensos ou heurísticas avançadas.**
+> **Este PR não introduz fuzzy matching, cache, catálogo local ou heurísticas avançadas.**
 
 ## Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 ## 1. Síntese Executiva
 
-A PR 64 conectou o fluxo principal ao primeiro lookup real via base relacional, retornando IDs persistidos em correspondências diretas e mantendo fallback previsível nos casos sem match.
+A PR 64 conectou o fluxo principal ao primeiro lookup real via base principal, retornando IDs persistidos em correspondências diretas e mantendo fallback previsível nos casos sem match.
 
-Com essa fundação concluída, o próximo passo mínimo correto é melhorar a taxa de correspondência sem expandir a arquitetura. Esta PR adiciona normalização determinística da entrada antes da consulta, permitindo reconhecer valores equivalentes com diferenças superficiais de formatação.
+Com essa fundação concluída, o próximo passo mínimo correto é melhorar a taxa de correspondência sem expandir a arquitetura. Esta PR adiciona normalização determinística da entrada antes da consulta, permitindo reconhecer valores equivalentes com diferenças superficiais de formatação sem duplicar persistência local.
 
 ## 2. Objetivo do PR
 
-- introduzir normalização mínima antes do lookup relacional
+- introduzir normalização mínima antes do lookup real
 - ampliar matches persistidos para entradas equivalentes
 - preservar contrato atual de saída
 - manter fallback atual para no-match
@@ -54,12 +54,12 @@ Com essa fundação concluída, o próximo passo mínimo correto é melhorar a t
 
 ## 3. Decisão Arquitetural
 
-A arquitetura existente é mantida. O `IdResolutionAgent` continua orquestrando o fluxo e o `IdResolutionDao` permanece responsável exclusivamente pela persistência. A nova etapa adiciona apenas preparação determinística da chave antes da consulta, sem novas camadas, sem fluxos paralelos e sem mudança de boundary.
+A arquitetura existente é mantida. O `IdResolutionAgent` continua orquestrando o fluxo e o `IdResolutionDao` permanece responsável exclusivamente pela consulta à base principal. A nova etapa adiciona apenas preparação determinística da chave antes da consulta, sem novas camadas, sem fluxos paralelos e sem mudança de boundary.
 
 ## 4. Escopo
 
 - normalização de valores usados no lookup
-- `trim` de borda
+- trim de borda
 - colapso de espaços internos
 - padronização de casing
 - reaproveitamento das queries reais já introduzidas na PR 64
@@ -76,6 +76,7 @@ A arquitetura existente é mantida. O `IdResolutionAgent` continua orquestrando 
 - heurísticas avançadas
 - observabilidade expandida
 - alteração de contratos externos
+- catálogo local
 - expansão para próximos slices
 
 ## 6. Fluxo Arquitetural
@@ -104,7 +105,7 @@ flowchart LR
     A["Metadata"] --> B["Normalizer"]
     B --> C["IdResolutionAgent"]
     C --> D["IdResolutionDao"]
-    D --> E["Relational DB"]
+    D --> E["Base API Principal"]
     E --> F["IDs reais ou fallback"]
     F --> G["Output"]
 
@@ -134,8 +135,6 @@ flowchart LR
 
 ## 7. Contratos Mínimos
 
-Os contratos externos permanecem inalterados.
-
 ```ts
 export interface ResolvedIds {
   lawId?: string | null;
@@ -149,24 +148,23 @@ export interface ResolvedIds {
 
 - normalização simples, explícita e determinística
 - agent continua sem SQL
-- DAO continua concentrando persistência
-- queries reais reaproveitadas sem expansão
+- DAO continua concentrando consulta externa
+- queries reais reaproveitadas sem expansão estrutural
 - fallback preservado
 - sem antecipar próximos passos da fase
 
 ## 9. Critérios de Review
 
-- normalização é pequena e legível
-- boundary entre agent e DAO foi mantido
-- lookup continua encapsulado no DAO
+- normalização pequena e legível
+- boundary entre agent e DAO mantido
+- consulta encapsulada no DAO
 - ausência de overengineering
-- fallback segue previsível
+- fallback previsível
 - testes cobrem match normalizado e no-match
-- documentação permanece proporcional ao slice
 
 ## 10. Critérios de Aceite
 
-- [ ] entrada é normalizada antes da consulta relacional
+- [ ] entrada normalizada antes da consulta real
 - [ ] variações superficiais válidas retornam IDs reais persistidos
 - [ ] no-match mantém fallback esperado
 - [ ] contrato externo permanece compatível
@@ -175,4 +173,4 @@ export interface ResolvedIds {
 
 ## 11. Conclusão
 
-A PR 65 expande a efetividade do lookup real introduzido na PR 64 sem ampliar a complexidade estrutural. O ganho vem de uma padronização mínima e previsível da entrada, mantendo o fluxo incremental, simples e aderente ao desenho da Fase 2.
+A PR 65 expande a efetividade do lookup real introduzido na PR 64 sem ampliar a complexidade estrutural nem reabrir persistência local indevida. O ganho vem de uma padronização mínima e previsível da entrada, mantendo o fluxo incremental, simples e aderente ao boundary definido para a Fase 2.
