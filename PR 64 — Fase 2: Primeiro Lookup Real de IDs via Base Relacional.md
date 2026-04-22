@@ -1,5 +1,5 @@
-# 🔎 PR 64 — Fase 2: Primeiro Lookup Real de IDs via Base Relacional
-## Ativação inicial do match persistido no fluxo principal com recorte mínimo e previsível
+# 🔎 PR 64 — Fase 2: Primeiro Lookup Real de IDs via Base Principal
+## Ativação inicial da resolução real de referências externas sem catálogo local neste serviço
 
 ---
 
@@ -16,70 +16,71 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR ativa o primeiro uso funcional da base relacional para resolução de IDs.
+> Esta PR inaugura a primeira resolução real de IDs após o realinhamento arquitetural da PR 63.
 >
-> - implementa consultas reais no DAO
+> - consulta referências na base da API principal
 > - retorna IDs persistidos quando houver match
-> - mantém fallback previsível quando não houver correspondência
+> - preserva fallback previsível quando não houver correspondência
+> - mantém este serviço sem catálogo local duplicado
 >
-> **Este PR não introduz fuzzy matching, cache ou heurísticas avançadas.**
+> **Este PR não introduz fuzzy matching, cache ou sincronização local.**
 
 ## Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 ## 1. Síntese Executiva
 
-Após a introdução do boundary de resolução via DAO e da foundation relacional, o próximo passo natural é conectar o fluxo principal à persistência real. Esta entrega habilita o primeiro lookup funcional, retornando IDs reais em correspondências diretas e preservando o comportamento previsível nos casos sem match.
+Após a correção de boundary na PR 63, o próximo passo natural é conectar a resolução de IDs à fonte de verdade correta: a base da API principal. Esta entrega habilita o primeiro lookup funcional de referências externas, retornando IDs reais em correspondências diretas e preservando comportamento previsível quando não houver match.
 
 ## 2. Objetivo do PR
 
-- implementar queries reais no `IdResolutionDao`
-- ativar lookup persistido no fluxo principal
+- implementar acesso real à base da API principal para resolução de IDs
+- ativar primeiro lookup funcional no fluxo principal
 - preservar contrato atual de saída
 - manter fallback controlado para no-match
-- validar a evolução com testes objetivos
+- validar evolução com testes objetivos
 
 ## 3. Decisão Arquitetural
 
-A arquitetura existente é mantida. O `IdResolutionAgent` continua responsável pela orquestração, enquanto o `IdResolutionDao` passa a executar consultas reais na base relacional. O recorte permanece pequeno, direto e revisável.
+A arquitetura segue o boundary revisado. Este serviço continua sem persistir `Law` e `Bank` localmente. O `IdResolutionAgent` permanece como orquestrador do fluxo mínimo, enquanto um boundary dedicado passa a consultar a base principal para obter referências reais.
 
 ## 4. Escopo
 
-- implementação de consultas reais no DAO
-- primeiro match persistido para entidades suportadas nesta etapa
+- criação de acesso dedicado à base principal
+- primeiro lookup real para entidades suportadas nesta etapa
 - retorno de IDs reais quando encontrados
 - fallback atual quando não encontrados
 - testes cobrindo match e ausência de match
 
 ## 5. Fora de Escopo
 
+- catálogo local espelhado
+- sincronização de dados
 - fuzzy matching
 - score de confiança
-- aliases extensos
 - cache Redis
 - múltiplas estratégias paralelas
 - heurísticas avançadas
 - observabilidade expandida
-- enriquecimento adicional
 
 ## 6. Fluxo Arquitetural
 
 ```mermaid
 flowchart LR
     A[Metadata] --> B[IdResolutionAgent]
-    B --> C[IdResolutionDao]
-    C --> D[(Relational DB)]
+    B --> C[Reference Boundary]
+    C --> D[(Base API Principal)]
     D --> E[IDs reais ou fallback]
     E --> F[Output]
 
@@ -115,22 +116,23 @@ ResolvedIds {
 
 - queries simples e legíveis
 - priorizar match exato
-- agent sem SQL
-- DAO concentrando persistência
+- agent sem acesso direto a infra externa
+- boundary dedicado concentrando integração
 - fallback preservado
 - sem antecipar próximas fases
 
 ## 9. Critérios de Review
 
-- lookup real encapsulado no DAO
+- integração respeita boundary correto
+- ausência de catálogo local duplicado
 - agent permanece coeso
-- ausência de overengineering
 - fallback previsível
 - testes cobrem match e no-match
+- ausência de overengineering
 
 ## 10. Critérios de Aceite
 
-- [ ] DAO consulta base relacional
+- [ ] resolução consulta base principal
 - [ ] IDs reais retornam quando houver match
 - [ ] no-match mantém fallback esperado
 - [ ] contrato externo permanece compatível
@@ -138,4 +140,4 @@ ResolvedIds {
 
 ## 11. Conclusão
 
-Esta PR conclui a transição entre foundation e uso funcional da persistência para resolução de IDs. O fluxo passa a consumir dados reais de forma controlada, incremental e aderente ao desenho da Fase 2.
+Esta PR conclui a transição entre fallback sintético e resolução real aderente ao boundary correto. O fluxo passa a consumir dados da fonte de verdade sem duplicação local, de forma incremental, controlada e revisável.
