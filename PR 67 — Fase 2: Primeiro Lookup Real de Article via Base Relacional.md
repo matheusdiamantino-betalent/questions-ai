@@ -1,5 +1,5 @@
-# ⚖️ PR 67 — Fase 2: Primeira Resolução Real de SubMatter na Base Principal
-## Ativação funcional mínima da classificação jurídica existente no legado sem fundação paralela
+# 🤖 PR 67 — Fase 2: Início Mínimo dos Agents Avançados
+## Primeira ativação controlada da abordagem avançada após a consolidação do match determinístico
 
 ---
 
@@ -7,23 +7,22 @@
 
 ![PR](https://img.shields.io/badge/PR-67-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-submatter%20lookup-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/status-ready%20for%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-pivot%20agents-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-primeiro%20agent%20avancado%20minimo-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> Esta PR transforma o próximo passo da Fase 2 em uma entrega funcional ancorada no legado real.
+> Esta PR inicia a trilha de agents avançados na Fase 2 pelo menor recorte funcional possível, preservando a correção de rota consolidada até a PR 66 e evitando qualquer foundation paralela.
 >
-> - ativa a primeira resolução real de `subMatter` na base principal
-> - usa taxonomia já comprovada no legado (`disciplines`, `matters`, `sub_matters`)
-> - evita modelagem especulativa de entidades não comprovadas
-> - preserva o recorte pequeno, revisável e diretamente útil ao pipeline atual
+> - posiciona o primeiro agent avançado como continuação direta do fluxo já estabilizado
+> - adiciona apenas o próximo passo funcional necessário depois do match determinístico dos IDs
+> - mantém a implementação pequena, revisável e sem abrir plataforma genérica de agents
 >
-> **Este PR não cria persistência local nova, não altera contratos externos e não introduz platform foundation multi-agent.**
+> **Este PR não introduz registry, dispatcher abstrato, múltiplos agents, orquestração expandida ou preparação estrutural para fases futuras.**
 
 ## Sumário
 
@@ -41,54 +40,48 @@
 
 ## 1. Síntese Executiva
 
-A sequência recente da Fase 2 consolidou um boundary mais aderente ao sistema principal. A PR 63 removeu catálogo relacional local indevido. A PR 64 ativou o primeiro lookup real via base principal. A PR 65 elevou a taxa de match com normalização determinística antes da consulta. A PR 66 corrigiu o enquadramento do recorte ao eliminar premissas sobre estruturas não comprovadas no legado.
+A PR 66 consolidou a correção de direção da Fase 2 ao fechar a etapa de match determinístico dos IDs dentro do boundary que já fazia sentido para o fluxo atual. Com isso, a sequência deixa de ser expandir indefinidamente a trilha de lookup e passa a permitir o próximo avanço funcional validado para a fase: o início dos agents avançados.
 
-Com esse histórico estabilizado, o próximo passo correto não é abrir foundation genérica de agents nem insistir em entidades normativas sem fonte de verdade comprovada. O passo incremental correto é ativar valor funcional sobre uma taxonomia já existente no legado: `disciplines`, `matters`, `sub_matters` e sua associação com `questions`.
+Esta PR faz exatamente esse movimento, mas sem tratar a nova etapa como redesign do pipeline. Em vez de abrir uma foundation genérica ou antecipar a malha completa de agents, o recorte introduz apenas o primeiro passo funcional necessário para a abordagem avançada passar a existir de forma explícita no fluxo.
 
-Esta PR faz exatamente isso ao introduzir a primeira resolução real de `subMatter` na base principal, mantendo o fluxo atual e adicionando apenas o mínimo necessário para produzir um ID juridicamente classificatório aderente ao modelo já persistido.
+O resultado é uma continuação natural da PR anterior: o match mínimo permanece como base já resolvida, e a Fase 2 avança agora para a primeira ativação controlada dos agents avançados, com escopo pequeno, leitura simples e baixo ruído de review.
 
 ## 2. Objetivo do PR
 
-- ativar a primeira resolução real de `subMatter` na base principal
-- aproveitar a taxonomia jurídica já comprovada no legado
-- retornar `subMatterId` a partir de classificação textual normalizada
-- manter o pipeline atual sem inflar escopo estrutural
-- reforçar aderência ao boundary correto da Fase 2
+- iniciar a trilha de agents avançados após a consolidação do match determinístico
+- introduzir o primeiro agent avançado no menor recorte funcional possível
+- integrar esse passo ao fluxo atual sem redesenhar a estrutura já aprovada
+- manter contratos, responsabilidades e testes proporcionais ao slice
+- preservar a evolução incremental da Fase 2 sem antecipar complexidade
 
 ## 3. Decisão Arquitetural
 
-A decisão arquitetural desta PR é fazer a próxima evolução funcional exclusivamente sobre entidades reais do legado. O domínio de classificação jurídica já expõe estrutura persistida suficiente para um passo incremental útil: `disciplines`, `matters`, `sub_matters` e `question_sub_matters`.
+A decisão arquitetural desta PR é iniciar os agents avançados como continuação direta do fluxo já existente, e não como uma plataforma nova ao lado dele. O primeiro agent avançado entra como próximo passo funcional da sequência atual, consumindo o contexto já estabilizado e devolvendo sua saída dentro do pipeline vigente.
 
-A escolha por `subMatter` preserva o padrão correto do projeto por quatro razões:
+Com isso, a PR evita abrir registry, dispatcher, catálogo de agents, estratégia de roteamento ou qualquer camada transversal que ainda não tenha uso imediato. A arquitetura base permanece a mesma; o que muda aqui é apenas a ativação mínima da nova trilha, no ponto em que ela passa a ser necessária e verificável.
 
-- evolui em cima de fonte de verdade comprovada
-- evita fundação paralela e modelagem especulativa
-- adiciona valor funcional imediato ao pipeline de resolução
-- mantém o recorte proporcional ao estágio atual do sistema
-
-O objetivo aqui não é resolver toda a taxonomia com heurísticas amplas, nem redesenhar a arquitetura de agents. O objetivo é validar o caminho mínimo real de lookup classificatório a partir da base principal.
+Esse posicionamento mantém a fase sob controle em três frentes: preserva o desenho aprovado, reduz ruído de implementação e deixa claro para review que o objetivo não é inaugurar uma infraestrutura abstrata, mas validar o primeiro slice real dos agents avançados.
 
 ## 4. Escopo
 
-- introduzir lookup real de `subMatter` na base principal
-- definir a assinatura mínima de entrada para a resolução
-- integrar a resolução ao `IdResolutionAgent` apenas no ponto necessário
-- adicionar ou ajustar método correspondente no `IdResolutionDao`
-- retornar `subMatterId` quando houver match determinístico
-- manter testes e validações proporcionais ao slice
+- introduzir o primeiro agent avançado da Fase 2
+- conectar esse agent ao fluxo já estabilizado nas PRs anteriores
+- manter a execução dentro do pipeline atual, sem trilha paralela
+- adicionar apenas os contratos internos estritamente necessários ao novo passo
+- cobrir o slice com os ajustes mínimos de implementação e teste
 
 ## 5. Fora de Escopo
 
-- criação de novas tabelas locais
-- migrations
-- lookup de `law` ou `article`
-- fuzzy matching
-- aliases
-- heurísticas avançadas de desambiguação
-- cache Redis
-- expansão de contratos externos
-- refatoração para platform foundation multi-agent
-- generalização prematura de agent registry, router ou APIs genéricas
+- registry genérico de agents
+- dispatcher, roteador ou resolvedor abstrato
+- múltiplos agents avançados na mesma PR
+- pipeline completo de agentes
+- fallback amplo entre estratégias
+- observabilidade expandida para a nova trilha
+- cache adicional, fila extra ou coordenação distribuída
+- contratos públicos amplos para agentes futuros
+- refatoração estrutural grande de módulo, pasta ou boundary
+- qualquer foundation voltada a escalabilidade futura sem uso imediato neste slice
 
 ## 6. Fluxo Arquitetural
 
@@ -113,86 +106,73 @@ O objetivo aqui não é resolver toda a taxonomia com heurísticas amplas, nem r
   }
 }}%%
 flowchart LR
-    A["Classificação textual normalizada"] --> B["IdResolutionAgent"]
-    B --> C["IdResolutionDao"]
-    C --> D["Lookup real em sub_matters"]
-    D --> E["Retorno de subMatterId"]
-    E --> F["Pipeline segue com classificação resolvida"]
+    A["Fluxo atual estabilizado<br/>após PR 66"] --> B["Contexto mínimo já resolvido<br/>para execução avançada"]
+    B --> C["Primeiro agent avançado<br/>é acionado"]
+    C --> D["Saída retorna ao fluxo<br/>existente"]
+    D --> E["Fase 2 avança sem<br/>redesign nem foundation paralela"]
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
     classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
     classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
-    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
-    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef foundationBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef coreBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
 
     class A step1;
     class B step2;
     class C step3;
     class D step4;
     class E step5;
-    class F step6;
 
     linkStyle 0 stroke:#9ca3af,stroke-width:2px;
     linkStyle 1 stroke:#9ca3af,stroke-width:2px;
     linkStyle 2 stroke:#9ca3af,stroke-width:2px;
     linkStyle 3 stroke:#9ca3af,stroke-width:2px;
-    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ## 7. Contratos Mínimos
 
-Contratos externos permanecem inalterados nesta PR.
+Os contratos desta PR devem permanecer estritamente proporcionais ao primeiro agent avançado introduzido. Não entra contrato genérico de plataforma, envelope universal de execução, discriminated union amplo para agentes futuros ou qualquer modelagem pensada para uma malha ainda inexistente.
 
-Esta etapa introduz apenas o contrato interno mínimo necessário para a primeira resolução real de `subMatter`:
-
-```ts
-type ResolveSubMatterInput = {
-  normalizedSubMatterName: string;
-};
-```
-
-Caso o legado exija desambiguação mínima por contexto classificatório, a evolução pode admitir apoio de `matter` ou `discipline` em etapas futuras. Nesta PR, o foco permanece no menor contrato capaz de validar o caminho real de lookup.
-
-Saída esperada do slice:
-
-```ts
-type ResolveSubMatterOutput = {
-  subMatterId: string | null;
-};
-```
+Se houver ajuste contratual, ele deve ser interno, localizado e diretamente vinculado ao input e ao output necessários para esse primeiro slice. Todo o restante permanece como está, preservando a coerência com a arquitetura já aprovada e evitando inflar a fase por antecipação.
 
 ## 8. Regras de Implementação
 
-- não criar persistência local nova
-- não inventar entidade fora do legado comprovado
-- manter `IdResolutionAgent` sem SQL
-- concentrar acesso à base principal no `IdResolutionDao`
-- introduzir apenas um lookup determinístico mínimo
-- evitar abstrações genéricas não exigidas pelo slice
-- preservar baixo ruído estrutural e facilidade de review
+- manter controller e fluxo externo inalterados no que não for necessário ao novo slice
+- integrar o primeiro agent avançado ao pipeline existente, sem ramificação paralela de arquitetura
+- manter service e agent com responsabilidades claras e visíveis
+- restringir DAO e acesso a dados ao papel de persistência/consulta, sem decisão de fluxo
+- evitar abstrações genéricas sem consumo imediato
+- não abrir foundation de orquestração, registry ou infraestrutura transversal
+- limitar implementação, testes e contratos ao que for indispensável para a ativação mínima
 
 ## 9. Critérios de Review
 
-- a PR evolui sobre entidade real do legado
-- o lookup de `subMatter` foi implementado no boundary correto
-- o passo continua pequeno e tecnicamente revisável
-- não há fundação paralela nem modelagem especulativa
-- `IdResolutionAgent` continua enxuto
-- `IdResolutionDao` concentra a consulta real
-- documentação e testes permanecem proporcionais ao recorte
+- a PR representa continuação natural da PR 66
+- o início dos agents avançados ficou explícito sem redesign do pipeline
+- o recorte permanece pequeno, controlado e fácil de revisar
+- não foi criada foundation paralela para agents
+- as responsabilidades continuam proporcionais ao slice
+- contratos e testes não antecipam cenários futuros sem uso imediato
+- documentação e implementação mantêm baixo ruído e aderência à Fase 2
 
 ## 10. Critérios de Aceite
 
-- [ ] o sistema passa a resolver `subMatterId` real na base principal
-- [ ] nenhuma persistência local nova foi criada
-- [ ] nenhum contrato externo foi alterado
-- [ ] o fluxo atual permaneceu íntegro
-- [ ] suíte de testes permanece verde
-- [ ] a PR entrega valor funcional concreto sem inflar a arquitetura
+- [ ] o primeiro slice de agents avançados passa a existir de forma explícita no fluxo da Fase 2
+- [ ] a integração ocorre sobre o pipeline atual, sem redesign estrutural
+- [ ] não foram introduzidos registry, dispatcher abstrato ou foundation paralela
+- [ ] contratos e implementação permanecem proporcionais ao primeiro agent avançado
+- [ ] o comportamento novo fica coberto pelo conjunto mínimo necessário de testes
+- [ ] a PR preserva simplicidade, clareza e facilidade de review
 
 ## 11. Conclusão
 
-A PR 67 segue a linha correta da Fase 2 ao trocar especulação por aderência ao legado. Em vez de abrir uma foundation genérica de agents ou insistir em entidades sem fonte de verdade comprovada, o projeto adiciona uma capacidade funcional real sobre a taxonomia jurídica já existente.
+A PR 67 inicia a trilha de agents avançados no ponto correto da sequência evolutiva da Fase 2: depois da consolidação do match determinístico e sem reabrir a arquitetura já ajustada. Em vez de antecipar uma plataforma inteira de agents, a entrega adiciona apenas o primeiro passo funcional necessário para que a abordagem avançada comece a existir no sistema.
 
-O resultado é uma entrega pequena, objetiva e útil: a primeira resolução real de `subMatter` na base principal, construída no boundary correto e sem overengineering.
+Com isso, a fase avança com controle de escopo, continuidade real e leitura técnica limpa. O ganho desta PR não está em ampliar a arquitetura, mas em mover o fluxo para o próximo slice correto, mantendo a implementação pequena, coerente e revisável.
