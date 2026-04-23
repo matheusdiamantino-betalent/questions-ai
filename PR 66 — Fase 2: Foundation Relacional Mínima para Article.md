@@ -1,15 +1,14 @@
-
-# 🧩 PR 65 — Fase 2: Normalização Determinística para Lookup Relacional
-## Evolução incremental da fundação relacional com aumento controlado de match sem ampliar arquitetura
+# 🔎 PR 66 — Fase 2: Expansão Controlada do ID Resolution para Entidades Essenciais
+## Evolução incremental da resolução de IDs com cobertura mínima das classificações centrais do legado
 
 ---
 
 <div align="left">
 
-![PR](https://img.shields.io/badge/PR-65-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
+![PR](https://img.shields.io/badge/PR-66-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-normalizacao%20deterministica-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-id%20resolution%20essencial-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-ready%20for%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -17,17 +16,17 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR sucede a fundação relacional mínima introduzida na PR 64 e adiciona uma etapa simples de normalização determinística antes das consultas relacionais.
+> Esta PR expande o ID Resolution sobre a fundação criada nas PRs 64 e 65, adicionando cobertura objetiva para entidades centrais do domínio sem alterar o desenho arquitetural atual.
 >
-> - reduz falhas por variações superficiais de entrada
-> - aumenta reaproveitamento de registros já existentes
-> - preserva boundary, contrato externo e recorte incremental
+> - prioriza disciplina e assunto como núcleo mínimo
+> - adiciona suporte proporcional para subassunto, ano, cargo, instituição, banca e artigo
+> - preserva o boundary entre `IdResolutionAgent` e `IdResolutionDao`
 >
-> **Esta PR não introduz fuzzy matching, cache, catálogo local ou heurísticas avançadas.**
+> **Não inclui fuzzy matching, catálogo local, cache Redis ou heurísticas avançadas.**
 
 ## Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
+11. [Síntese Executiva](#1-síntese-executiva)
 2. [Objetivo do PR](#2-objetivo-do-pr)
 3. [Decisão Arquitetural](#3-decisão-arquitetural)
 4. [Escopo](#4-escopo)
@@ -41,39 +40,46 @@
 
 ## 1. Síntese Executiva
 
-A PR 64 estabeleceu a base relacional mínima para a evolução do ID Resolution. Com essa fundação disponível, o próximo passo natural é melhorar a taxa de match sem ampliar responsabilidades ou introduzir novas camadas. Esta entrega adiciona somente normalização determinística da entrada antes do lookup.
+Após corrigir a base relacional (PR 64) e consolidar a normalização determinística do primeiro lookup real (PR 65), o próximo passo natural é ampliar a cobertura para entidades efetivamente usadas pelo domínio.
+
+Esta entrega adiciona resolução real e proporcional para classificações centrais do legado, mantendo a mesma separação de responsabilidades e sem introduzir complexidade paralela.
 
 ## 2. Objetivo do PR
 
-- normalizar entradas usadas nas consultas relacionais
-- ampliar match para valores equivalentes
-- preservar contrato atual de saída
-- manter no-match previsível
-- validar evolução com testes objetivos
+- expandir o lookup real para entidades essenciais
+- priorizar disciplina e assunto
+- suportar subassunto, ano, cargo, instituição, banca e artigo
+- preservar contratos existentes
+- manter evolução pequena e testável
 
 ## 3. Decisão Arquitetural
 
-O desenho permanece inalterado. O fluxo atual continua utilizando a mesma separação de responsabilidades. A mudança adiciona apenas preparação explícita da chave de busca antes da query.
+O `IdResolutionAgent` continua coordenando a resolução a partir do metadata classificado. O `IdResolutionDao` permanece como fronteira de acesso à base principal.
+
+A evolução ocorre apenas pela ampliação de consultas objetivas e reaproveitamento da normalização já existente.
 
 ## 4. Escopo
 
-- trim de bordas
-- colapso de espaços internos
-- remoção de acentos quando aplicável
-- padronização determinística de entrada
-- reaproveitamento das queries existentes
-- testes de match normalizado e no-match
+- resolver `disciplineId`
+- resolver `matterId`
+- resolver `subMatterId`
+- resolver `yearId`
+- resolver `bankId`
+- resolver `institutionId`
+- resolver `jobId`
+- resolver `articleId`
+- ajustar testes unitários proporcionais ao slice
 
 ## 5. Fora de Escopo
 
 - fuzzy matching
-- aliases extensos
 - score de confiança
+- aliases extensos
 - cache Redis
-- múltiplas estratégias paralelas
 - catálogo local
-- novas integrações
-- expansão para outros domínios
+- refactor amplo de classificação
+- abstrações genéricas de matching
+- observabilidade expandida
 
 ## 6. Fluxo Arquitetural
 
@@ -85,57 +91,89 @@ O desenho permanece inalterado. O fluxo atual continua utilizando a mesma separa
     "primaryColor": "#0b1220",
     "primaryTextColor": "#ffffff",
     "primaryBorderColor": "#22d3ee",
-    "lineColor": "#94a3b8"
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
   }
 }}%%
 flowchart LR
-    A[Metadata] --> B[Normalizer]
-    B --> C[IdResolutionAgent]
-    C --> D[IdResolutionDao]
-    D --> E[(Base Principal)]
-    E --> F[IDs resolvidos ou null]
+    A["Classification Metadata"] --> B["IdResolutionAgent"]
+    B --> C["Normalize Inputs"]
+    C --> D["IdResolutionDao"]
+    D --> E["Main API DB"]
+    E --> F["Resolved IDs"]
+    F --> G["Next Agents"]
+
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step7 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B step2;
+    class C step3;
+    class D step4;
+    class E step5;
+    class F step6;
+    class G step7;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 5 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ## 7. Contratos Mínimos
 
 ```ts
-ResolvedIds {
+type ResolvedIds = {
   disciplineId?: string | null;
   matterId?: string | null;
   subMatterId?: string | null;
-  bankId?: string | null;
-  articleId?: string | null;
   yearId?: string | null;
+  bankId?: string | null;
   institutionId?: string | null;
   jobId?: string | null;
-}
+  articleId?: string | null;
+};
 ```
 
 ## 8. Regras de Implementação
 
-- normalização simples e explícita
-- sem mover responsabilidades de camada
-- sem novas abstrações
-- query permanece no DAO
-- comportamento previsível
-- recorte pequeno
+- disciplina e assunto como prioridade mínima
+- agent orquestra, DAO consulta
+- queries pequenas e aderentes ao legado
+- reaproveitar normalização determinística
+- evitar overengineering
 
 ## 9. Critérios de Review
 
-- normalização legível e coesa
-- boundary mantido
-- ausência de overengineering
-- testes cobrindo equivalência e no-match
-- sem regressão contratual
+- expansão coerente com a fase
+- boundary claro entre agent e DAO
+- ausência de foundation paralela
+- cobertura funcional restrita ao escopo
+- diff revisável
 
 ## 10. Critérios de Aceite
 
-- [ ] entrada normalizada antes do lookup
-- [ ] valores equivalentes retornam match persistido quando existir
-- [ ] no-match permanece previsível
-- [ ] contrato externo compatível
-- [ ] suíte de testes verde
+- [ ] `disciplineId` e `matterId` resolvidos quando presentes
+- [ ] demais entidades resolvidas de forma proporcional
+- [ ] contratos compatíveis
+- [ ] testes verdes
+- [ ] sem persistência local adicional
 
 ## 11. Conclusão
 
-A PR 65 aumenta a efetividade da fundação relacional introduzida na PR 64 usando apenas padronização determinística da entrada. O ganho funcional vem sem aumento indevido de complexidade e preserva a evolução incremental da Fase 2.
+A PR 66 amplia o ID Resolution para entidades essenciais do domínio de forma controlada, incremental e aderente à arquitetura já consolidada.
