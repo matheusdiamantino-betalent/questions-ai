@@ -80,12 +80,62 @@ Não há redesign, novos módulos ou redistribuição estrutural ampla de respon
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
+}}%%
 flowchart LR
-A[Questão Extraída] --> B[ClassificationAgent]
-B --> C[IdResolutionAgent]
-C --> D[InitialQuestionProcessingAgent]
-D --> E[Contexto Refinado]
-E --> F[Etapas Seguintes]
+    A["Questão Extraída"] --> B["ClassificationAgent"]
+    B --> C["IdResolutionAgent"]
+    C --> D["InitialQuestionProcessingAgent"]
+    D --> E["Contexto Refinado"]
+    E --> F["Etapas Seguintes"]
+
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step7 fill:#10243a,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef step8 fill:#221b2f,stroke:#f472b6,stroke-width:2px,color:#ffffff;
+    classDef step9 fill:#14281d,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef step10 fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef step11 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef foundationBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef coreBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B step2;
+    class C step3;
+    class D step4;
+    class E step5;
+    class F step6;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ## 7. Contratos Mínimos
