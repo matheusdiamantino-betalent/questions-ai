@@ -1,5 +1,5 @@
-# 🔎 PR 64 — Fase 2: Primeiro Lookup Real de IDs via Base Principal
-## Ativação inicial da resolução real de referências externas sem catálogo local neste serviço
+# 🧩 PR 64 — Fase 2: Fundação Relacional Mínima para ID Resolution
+## Alinhamento da referência mínima ao modelo real da API principal
 
 ---
 
@@ -8,7 +8,7 @@
 ![PR](https://img.shields.io/badge/PR-64-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-primeiro%20lookup%20real-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-base%20relacional%20real-9333ea?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-ready%20for%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
@@ -16,73 +16,97 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR inaugura a primeira resolução real de IDs após o realinhamento arquitetural da PR 63.
+> Esta PR redesenha o recorte da PR 64 para refletir a estrutura real utilizada na classificação de questões na base principal.
 >
-> - consulta referências na base da API principal
-> - retorna IDs persistidos quando houver match
-> - preserva fallback previsível quando não houver correspondência
-> - mantém este serviço sem catálogo local duplicado
+> - substitui premissas indevidas sobre o schema anterior
+> - ancora a referência mínima nas tabelas corretas
+> - preserva recorte pequeno e sem lookup expandido nesta etapa
+> - prepara evolução posterior sobre base aderente ao legado
 >
-> **Este PR não introduz fuzzy matching, cache ou sincronização local.**
+> **Esta PR não implementa fuzzy matching, cache, múltiplas estratégias ou pipeline avançado de classificação.**
 
 ## Sumário
 
-1. Síntese Executiva
-2. Objetivo do PR
-3. Decisão Arquitetural
-4. Escopo
-5. Fora de Escopo
-6. Fluxo Arquitetural
-7. Contratos Mínimos
-8. Regras de Implementação
-9. Critérios de Review
-10. Critérios de Aceite
-11. Conclusão
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Objetivo do PR](#2-objetivo-do-pr)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo](#4-escopo)
+5. [Fora de Escopo](#5-fora-de-escopo)
+6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
+7. [Contratos Mínimos](#7-contratos-mínimos)
+8. [Regras de Implementação](#8-regras-de-implementação)
+9. [Critérios de Review](#9-critérios-de-review)
+10. [Critérios de Aceite](#10-critérios-de-aceite)
+11. [Conclusão](#11-conclusão)
 
 ## 1. Síntese Executiva
 
-Após a correção de boundary na PR 63, o próximo passo natural é conectar a resolução de IDs à fonte de verdade correta: a base da API principal. Esta entrega habilita o primeiro lookup funcional de referências externas, retornando IDs reais em correspondências diretas e preservando comportamento previsível quando não houver match.
+Durante o review foi identificado que a foundation proposta inicialmente não refletia a estrutura real da base principal. O eixo correto para suportar classificação está associado às tabelas `filters` e `question_sub_matters`, e não ao modelo previamente assumido.
+
+Esta PR corrige essa direção arquitetural no menor recorte possível: ajusta a referência relacional mínima para espelhar a fonte real de dados e remove premissas incorretas antes de qualquer expansão funcional.
 
 ## 2. Objetivo do PR
 
-- implementar acesso real à base da API principal para resolução de IDs
-- ativar primeiro lookup funcional no fluxo principal
-- preservar contrato atual de saída
-- manter fallback controlado para no-match
-- validar evolução com testes objetivos
+- alinhar a base relacional ao modelo real da API principal
+- corrigir a foundation da trilha de classificação
+- introduzir apenas a estrutura mínima necessária para evolução futura
+- evitar continuidade sobre premissa incorreta
+- manter mudança pequena e revisável
 
 ## 3. Decisão Arquitetural
 
-A arquitetura segue o boundary revisado. Este serviço continua sem persistir `Law` e `Bank` localmente. O `IdResolutionAgent` permanece como orquestrador do fluxo mínimo, enquanto um boundary dedicado passa a consultar a base principal para obter referências reais.
+A decisão desta PR é corrigir primeiro a fundação relacional antes de ampliar comportamento. Em vez de insistir em um schema artificial, o projeto passa a se apoiar nas estruturas reais já existentes no legado.
+
+Com isso, futuras evoluções de lookup e classificação avançada poderão crescer sobre um boundary aderente, reduzindo retrabalho e ruído arquitetural.
 
 ## 4. Escopo
 
-- criação de acesso dedicado à base principal
-- primeiro lookup real para entidades suportadas nesta etapa
-- retorno de IDs reais quando encontrados
-- fallback atual quando não encontrados
-- testes cobrindo match e ausência de match
+- ajustar tipos e acesso da base principal para o modelo real
+- introduzir referência mínima baseada em `filters`
+- introduzir referência mínima baseada em `question_sub_matters`
+- remover premissas incompatíveis com o legado
+- manter compatibilidade do restante do fluxo atual
 
 ## 5. Fora de Escopo
 
-- catálogo local espelhado
-- sincronização de dados
-- fuzzy matching
-- score de confiança
+- lookup funcional completo
+n- fuzzy matching
+- heurísticas de classificação
 - cache Redis
-- múltiplas estratégias paralelas
-- heurísticas avançadas
-- observabilidade expandida
+- sincronização local
+- múltiplas tabelas além do necessário
+- refatoração ampla de módulos
+- agentes avançados nesta entrega
 
 ## 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
+}}%%
 flowchart LR
-    A[Metadata] --> B[IdResolutionAgent]
-    B --> C[Reference Boundary]
-    C --> D[(Base API Principal)]
-    D --> E[IDs reais ou fallback]
-    E --> F[Output]
+    A["Metadata atual"] --> B["Boundary relacional corrigido"]
+    B --> C["filters"]
+    B --> D["question_sub_matters"]
+    C --> E["Base correta para evolução"]
+    D --> E
+    E --> F["Próximos slices funcionais"]
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
@@ -90,6 +114,12 @@ flowchart LR
     classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
     classDef step5 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
     classDef step6 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef foundationBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef coreBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
 
     class A step1;
     class B step2;
@@ -97,47 +127,44 @@ flowchart LR
     class D step4;
     class E step5;
     class F step6;
-```
 
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
+```
 ## 7. Contratos Mínimos
 
-Os contratos externos permanecem inalterados.
-
-```ts
-ResolvedIds {
-  lawId?: string | null;
-  articleId?: string | null;
-  bankId?: string | null;
-  yearId?: string | null;
-}
-```
+Nenhum contrato externo precisa ser expandido nesta etapa. O foco é correção estrutural interna da fonte relacional.
 
 ## 8. Regras de Implementação
 
-- queries simples e legíveis
-- priorizar match exato
-- agent sem acesso direto a infra externa
-- boundary dedicado concentrando integração
-- fallback preservado
-- sem antecipar próximas fases
+- refletir o schema real disponível
+- evitar abstrações desnecessárias
+- alterar apenas o necessário para corrigir a base
+- preservar comportamento atual onde possível
+- não antecipar regras de negócio futuras
+- manter leitura simples e objetiva
 
 ## 9. Critérios de Review
 
-- integração respeita boundary correto
-- ausência de catálogo local duplicado
-- agent permanece coeso
-- fallback previsível
-- testes cobrem match e no-match
-- ausência de overengineering
+- a estrutura reflete o modelo real informado no review
+- uso correto de `filters` e `question_sub_matters`
+- recorte permanece pequeno
+- ausência de expansão funcional indevida
+- código simples e aderente ao momento do projeto
+- base preparada para próximos passos
 
 ## 10. Critérios de Aceite
 
-- [ ] resolução consulta base principal
-- [ ] IDs reais retornam quando houver match
-- [ ] no-match mantém fallback esperado
-- [ ] contrato externo permanece compatível
-- [ ] suíte de testes verde
+- [ ] schema anterior incorreto foi removido ou ajustado
+- [ ] referência mínima usa estruturas reais do legado
+- [ ] restante do fluxo segue estável
+- [ ] suíte de testes permanece verde
+- [ ] PR continua pequena e revisável
 
 ## 11. Conclusão
 
-Esta PR conclui a transição entre fallback sintético e resolução real aderente ao boundary correto. O fluxo passa a consumir dados da fonte de verdade sem duplicação local, de forma incremental, controlada e revisável.
+A PR 64 redesenhada deixa de abrir evolução sobre uma fundação artificial e reposiciona a trilha de classificação na estrutura real do sistema principal. O ganho principal desta entrega é arquitetural: corrigir a base antes de acelerar os próximos passos.
+
