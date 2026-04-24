@@ -1,24 +1,29 @@
-# 🤖 PR 81 — Fase 2: Normalização Controlada do Statement Adaptado
+# 🤖 PR 81 — Fase 2: Consolidação Controlada do Statement Adaptado
 
-## Fortalecimento da consistência textual do enunciado final processado
+## Fortalecimento da consistência final de `adaptedStatement` no output avançado
 
 ---
 
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-81-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-statement%20adaptado%20normalizado-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/status-ready-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Tipo](https://img.shields.io/badge/Tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/Fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/Escopo-statement%20consolidado-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/Status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
-> [!IMPORTANT]
-> Esta PR desloca a continuidade da fase avançada para outro output central do pipeline. Após consolidar o `answerKey` nas PRs 77, 78, 79 e 80, o foco passa a ser a consistência textual do `adaptedStatement`, preservando o recorte incremental e a arquitetura vigente.
-
 ---
 
+> [!IMPORTANT]
+> Esta PR fortalece a composição final de `adaptedStatement` no fluxo avançado, preservando arquitetura e contrato público.
+>
+> - consolida montagem final do statement
+> - reduz ruído estrutural
+> - mantém compatibilidade do output
+>
+> **Este PR não adiciona novos agentes, novos contratos ou redesign do pipeline.**
 
 ## Sumário
 
@@ -36,93 +41,47 @@
 
 # 1. Síntese Executiva
 
-O pipeline avançado já produz um `adaptedStatement` como parte do resultado processado. Entretanto, a consistência textual desse campo pode ser reforçada no fechamento do fluxo, evitando espaços residuais, quebras desnecessárias e variações de formatação vindas das etapas intermediárias.
+Após a evolução de partes centrais do resultado avançado, o próximo passo mínimo foi fortalecer a montagem final de `adaptedStatement`, campo já existente e relevante para o consumo downstream.
 
-A PR 81 consolida uma normalização controlada do statement adaptado, elevando previsibilidade sem introduzir novos agents, novas camadas ou expansão indevida da fase 2.
-
----
+A mudança consolida a composição no ponto correto do fluxo, elevando previsibilidade sem ampliar escopo funcional.
 
 # 2. Objetivo do PR
 
-Fortalecer a qualidade textual do `adaptedStatement` retornado pelo pipeline avançado, garantindo que o enunciado final processado seja entregue de forma limpa, estável e previsível.
-
-Objetivos diretos:
-
-* normalizar o `adaptedStatement` final
-* remover espaços duplicados residuais
-* garantir trim consistente do enunciado processado
-* preservar fallback atual quando não houver adaptação útil
-* manter o contrato final já consumido pelo pipeline
-* evoluir outro eixo funcional sem repetir o ciclo do `answerKey`
-
----
+- consolidar composição final de `adaptedStatement`
+- reduzir ruídos textuais residuais
+- preservar compatibilidade do contrato público
+- manter progressão incremental da fase 2
 
 # 3. Decisão Arquitetural
 
-A responsabilidade permanece nos componentes já existentes do fluxo avançado. A evolução acontece dentro do processamento atual do statement, sem criação de novos agents, módulos ou camadas.
+A responsabilidade permanece no componente já encarregado da adaptação do enunciado. A PR reforça comportamento no fluxo vigente, sem novas camadas, sem reorquestração e sem expansão estrutural.
 
-Não haverá:
+# 4. Escopo
 
-* novo agent
-* nova camada de orchestration
-* redesign do orchestrator
-* IA adicional
-* validação semântica do enunciado
-* expansão estrutural da fase 2
+- ajuste da composição final de `adaptedStatement`
+- normalização proporcional do texto final
+- testes unitários compatíveis com o slice
 
-A decisão é reforçar a normalização do `adaptedStatement` no ponto já responsável por sua produção ou consolidação final.
+# 5. Fora de Escopo
 
----
+- novos campos de output
+- nova estratégia de IA
+- alteração de contratos
+- redesign do pipeline
+- expansão da fase 2
 
-# 4. Escopo da PR
-
-## Incluído
-
-* normalização controlada do `adaptedStatement`
-* remoção de espaços duplicados residuais
-* trim consistente do enunciado final
-* preservação do fallback já existente
-* atualização proporcional dos testes unitários relacionados
-* preservação integral do contrato público
-
-## Fora de Escopo
-
-* reescrita semântica do enunciado
-* geração adicional por IA
-* validação jurídica do statement
-* novos agents
-* redesign do pipeline
-* expansão indevida da fase 2
-
----
-
-# 5. Fluxo Arquitetural
+# 6. Fluxo Arquitetural
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "themeVariables": {
-    "primaryColor": "#0f172a",
-    "primaryTextColor": "#e5e7eb",
-    "primaryBorderColor": "#38bdf8",
-    "lineColor": "#64748b",
-    "secondaryColor": "#111827",
-    "tertiaryColor": "#1e293b",
-    "background": "#020617"
-  }
-}}%%
 flowchart LR
-    A[Input.question.statement] --> B[StatementAdaptationAgent]
-    B --> C[Adapted Statement Candidate]
-    C --> D[Normalize Adapted Statement]
-    D --> E[Output.adaptedStatement]
+A["Input"] --> B["StatementAdaptationAgent"]
+B --> C["Composição Final"]
+C --> D["Output.adaptedStatement"]
 ```
 
----
+# 7. Contratos Mínimos
 
-# 6. Contratos Mínimos
-
-Sem alteração estrutural no output final.
+Sem alteração estrutural no contrato final.
 
 ```ts
 {
@@ -133,60 +92,27 @@ Sem alteração estrutural no output final.
 }
 ```
 
-A evolução ocorre na qualidade textual do `adaptedStatement`, não na expansão do contrato público.
+# 8. Regras de Implementação
 
----
+- concentrar ajuste no agente existente
+- evitar abstrações adicionais
+- manter orchestrator fora do recorte
+- preservar simplicidade
 
-# 7. Estratégia de Implementação
+# 9. Critérios de Review
 
-Ordem recomendada:
+- statement final está mais consistente
+- contrato permanece igual
+- recorte segue pequeno
+- ausência de overengineering
 
-1. `statement-adaptation.agent.ts`
-2. `statement-adaptation.agent.spec.ts`
-3. `initial-question-processing.agent.ts` (apenas se necessário)
-4. `initial-question-processing.agent.spec.ts`
-5. validação do contrato final
-6. regressão da suíte completa
+# 10. Critérios de Aceite
 
-Princípio central:
-
-> melhorar a consistência do enunciado final sem ampliar complexidade sistêmica.
-
----
-
-# 8. Critérios de Review
-
-Validar se:
-
-* o `adaptedStatement` ficou mais limpo e previsível
-* houve normalização consistente de espaços e quebras
-* o fallback existente foi preservado
-* o contrato final permaneceu inalterado
-* o recorte permaneceu pequeno
-* não houve overengineering
-
----
-
-# 9. Critérios de Aceite
-
-* `adaptedStatement` retorna normalizado
-* espaços duplicados e quebras residuais são removidos
-* fallback atual permanece compatível
-* testes permanecem verdes
-* nenhuma regressão no fluxo avançado
-
----
-
-# 10. Impacto Esperado
-
-Maior previsibilidade textual no resultado avançado, com enunciado final mais estável e adequado para consumo downstream.
-
-O sistema evolui além do `answerKey`, fortalecendo outro campo central do output processado.
-
----
+- [ ] `adaptedStatement` retorna composição consolidada
+- [ ] compatibilidade preservada
+- [ ] testes verdes
+- [ ] nenhuma regressão no fluxo avançado
 
 # 11. Conclusão
 
-A PR 81 dá continuidade à fase avançada em um eixo diferente do ciclo anterior: a qualidade textual do statement adaptado.
-
-Sem alterar arquitetura ou contrato público, o pipeline passa a entregar um `adaptedStatement` mais limpo, consistente e confiável.
+A PR 81 mantém a progressão incremental da fase 2 ao fortalecer `adaptedStatement` sem ampliar arquitetura ou escopo.
