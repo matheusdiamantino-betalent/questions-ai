@@ -4,78 +4,111 @@
 
 ---
 
-![PR](https://img.shields.io/badge/PR-77-2563eb?style=for-the-badge\&logo=gitpullrequest\&logoColor=white) ![Tipo](https://img.shields.io/badge/Tipo-nestjs%20slice-e11d48?style=for-the-badge\&logo=nestjs\&logoColor=white) ![Fase](https://img.shields.io/badge/Fase-2-f59e0b?style=for-the-badge\&logo=dependabot\&logoColor=white) ![Escopo](https://img.shields.io/badge/Escopo-serverless-059669?style=for-the-badge\&logo=serverless\&logoColor=white) ![Status](https://img.shields.io/badge/Status-ready-111827?style=for-the-badge\&logo=githubactions\&logoColor=white)
+<div align="left">
+
+![PR](https://img.shields.io/badge/PR-77-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
+![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-alternativa%20correta%20consolidada-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/status-ready-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+
+</div>
 
 > [!IMPORTANT]
-> Esta PR reposiciona a evolução da fase avançada para um eixo funcional: integridade da alternativa correta no resultado final. O foco sai de refinamentos contextuais anteriores e entra na previsibilidade de `answerKey.correctAlternative`, preservando o recorte incremental e a arquitetura vigente.
+> Esta PR redireciona o eixo evolutivo da fase avançada para evitar redundância com as PRs 75 e 76. O foco deixa de ser refinamento contextual e passa a ser a integridade funcional da alternativa correta no resultado final processado, preservando o recorte incremental e a arquitetura vigente.
 
-## 1. Síntese Executiva
+---
 
-O pipeline já recebe `correctAnswer` no input e o propaga entre etapas intermediárias. Entretanto, a consolidação desse valor no fechamento do `answerKey` ainda pode ser tornada mais explícita e resiliente.
+# 1. Síntese Executiva
 
-Esta PR fortalece a prioridade funcional de `correctAnswer` durante a composição final do resultado processado, reduzindo dependência de fallback implícito e elevando consistência sem expansão arquitetural.
+O pipeline já recebe `correctAnswer` no input e o propaga entre etapas. Entretanto, a utilização desse dado no fechamento do `answerKey` ainda pode ser tornada mais explícita, previsível e resiliente.
 
-## 2. Objetivo do PR
+A PR 77 consolida regras mínimas para a alternativa correta durante a montagem do resultado final, elevando consistência sem introduzir novos componentes, novas camadas ou expansão indevida da fase 2.
 
-Consolidar o uso de `correctAnswer` como fonte prioritária para preenchimento de `answerKey.correctAlternative`, mantendo compatibilidade com o fluxo atual e previsibilidade operacional.
+---
 
-## 3. Decisão Arquitetural
+# 2. Objetivo do PR
 
-A responsabilidade permanece distribuída entre os componentes já existentes. Não há criação de novos agents, módulos, camadas ou contratos paralelos.
+Fortalecer a utilização de `correctAnswer` como dado funcional do fluxo avançado, reduzindo dependência de fallback implícito e reforçando a integridade de `answerKey.correctAlternative`.
 
-```mermaid
-%%{init: {'theme':'base','themeVariables':{'primaryColor':'#0f172a','primaryTextColor':'#e5e7eb','primaryBorderColor':'#22d3ee','lineColor':'#64748b','secondaryColor':'#111827','tertiaryColor':'#1e293b','background':'#020617'}}}%%
-flowchart LR
-    A[Input.question.correctAnswer] --> B[InitialQuestionProcessingAgent]
-    B --> C[AnswerKeyAgent]
-    C --> D[Output.answerKey.correctAlternative]
-```
+Objetivos diretos:
 
-Diretrizes aplicadas:
-
-* recorte pequeno
-* prioridade explícita da alternativa correta
-* fallback controlado quando ausente
-* preservação do contrato final
-* zero sobreengenharia
-
-## 4. Escopo da PR
-
-### Incluído
-
-* revisar uso de `correctAnswer` no fluxo avançado
-* explicitar prioridade de preenchimento para `correctAlternative`
+* explicitar a prioridade de `correctAnswer` no fechamento do answer key
+* manter fallback controlado quando o valor prioritário estiver ausente
 * garantir consistência entre valor intermediário e output final
-* reforçar cenários com presença e ausência da alternativa correta
-* reduzir inferência implícita no fechamento do answer key
+* tornar a resolução da alternativa correta mais previsível
+* preservar o contrato final já consumido pelo pipeline
 
-### Fora de Escopo
+---
 
-* inferência automática por IA
+# 3. Decisão Arquitetural
+
+A responsabilidade permanece distribuída entre os serviços já existentes. A evolução acontece dentro do fluxo atual, sem criação de novos agents, módulos ou camadas.
+
+Não haverá:
+
+* novo agent
+* nova camada de orchestration
+* redesign do orchestrator
+* scoring adicional
+* validação semântica por IA
+* expansão estrutural da fase 2
+
+A decisão é consolidar a regra funcional da alternativa correta no ponto já responsável pela composição final do `answerKey`, preservando a simplicidade do pipeline.
+
+---
+
+# 4. Escopo da PR
+
+## Incluído
+
+* revisão do uso de `correctAnswer` no fluxo avançado
+* explicitação da prioridade de `correctAnswer` sobre fallback intermediário
+* consolidação de `correctAlternative` no fechamento do `answerKey`
+* tratamento explícito de ausência de alternativa correta
+* atualização proporcional dos testes unitários relacionados
+* preservação do shape final do output
+
+## Fora de Escopo
+
+* inferência automática da resposta correta por IA
 * validação semântica entre alternativas e justificativa
 * novos agents
 * redesign do orchestrator
 * score de confiança
-* mudanças amplas de contrato
+* expansão indevida da fase 2
 
-## 5. Fluxo Arquitetural
+---
+
+# 5. Fluxo Arquitetural
 
 ```mermaid
-%%{init: {'theme':'base','themeVariables':{'primaryColor':'#0f172a','primaryTextColor':'#e5e7eb','primaryBorderColor':'#a78bfa','lineColor':'#64748b','secondaryColor':'#111827','tertiaryColor':'#1e293b','background':'#020617'}}}%%
-sequenceDiagram
-    participant O as Orchestrator
-    participant I as InitialProcessing
-    participant A as AnswerKeyAgent
-
-    O->>I: process(question)
-    I-->>O: base.correctAlternative
-    O->>A: compose(answerKey)
-    A-->>O: correctAlternative consolidada
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#0f172a",
+    "primaryTextColor": "#e5e7eb",
+    "primaryBorderColor": "#38bdf8",
+    "lineColor": "#64748b",
+    "secondaryColor": "#111827",
+    "tertiaryColor": "#1e293b",
+    "background": "#020617"
+  }
+}}%%
+flowchart LR
+    A[Input.question.correctAnswer] --> B[AgentsFlowOrchestratorService]
+    B --> C[AnswerKeyAgent]
+    D[answerKeyBase.correctAlternative] --> C
+    C --> E[Output.answerKey.correctAlternative]
 ```
 
-## 6. Contratos Mínimos
+---
 
-Sem alteração estrutural obrigatória no output final.
+# 6. Contratos Mínimos
+
+Sem alteração estrutural obrigatória no output final da API.
+
+Exemplo conceitual:
 
 ```ts
 {
@@ -87,41 +120,60 @@ Sem alteração estrutural obrigatória no output final.
 }
 ```
 
-A evolução ocorre na regra de priorização e consistência de preenchimento do campo.
+A evolução ocorre na consistência de preenchimento e priorização do campo, não na expansão do contrato público.
 
-## 7. Estratégia de Implementação
+---
 
-* preferir ajustes locais nos services/agents existentes
-* evitar abstrações prematuras
-* manter compatibilidade com specs atuais
-* tratar ausência de `correctAnswer` de forma explícita
-* manter regras de fallback legíveis e testáveis
+# 7. Estratégia de Implementação
 
-## 8. Critérios de Review
+Ordem recomendada:
 
-* a alternativa correta ficou mais previsível no fluxo?
-* houve redução de fallback implícito?
-* o output final permaneceu estável?
-* o recorte permaneceu pequeno?
-* a solução evitou expansão desnecessária?
+1. `answer-key.agent.ts`
+2. `answer-key.agent.spec.ts`
+3. `agents-flow-orchestrator.service.ts`
+4. `agents-flow-orchestrator.service.spec.ts`
+5. validação do contrato central
+6. regressão da suíte completa
 
-## 9. Critérios de Aceite
+Princípio central:
 
-* `correctAlternative` consolidada corretamente
-* cenários com e sem `correctAnswer` cobertos
-* testes verdes
+> fortalecer a integridade funcional da alternativa correta sem ampliar a complexidade do sistema.
+
+---
+
+# 8. Critérios de Review
+
+Validar se:
+
+* a alternativa correta ficou mais previsível no fluxo
+* houve redução de fallback implícito
+* a prioridade de `correctAnswer` ficou explícita
+* o output final permaneceu estável
+* o recorte permaneceu pequeno
+* não houve overengineering
+
+---
+
+# 9. Critérios de Aceite
+
+* `correctAlternative` é consolidada corretamente no output final
+* cenários com e sem `correctAnswer` estão cobertos
+* fallback permanece controlado e explícito
 * nenhuma regressão no orchestrator
-* output final consistente
+* suíte de testes permanece verde
 
-## 10. Impacto Esperado
+---
 
-| Vetor        | Resultado                            |
-| ------------ | ------------------------------------ |
-| Consistência | Maior previsibilidade do campo final |
-| Manutenção   | Regras mais claras e localizadas     |
-| Risco        | Baixo, sem mudança estrutural        |
-| Evolução     | Base funcional mais sólida           |
+# 10. Impacto Esperado
 
-## 11. Conclusão
+Maior previsibilidade funcional no fechamento do `answerKey` e menor dependência de inferência implícita entre etapas intermediárias do pipeline.
 
-A PR 77 fortalece um ponto funcional crítico do pipeline avançado: a integridade da resposta correta no resultado final. O ganho principal é previsibilidade prática com baixo risco e sem repetir ciclos anteriores de refinamento contextual.
+O fluxo passa a tratar a alternativa correta de forma mais madura, explícita e confiável, sem alterar a arquitetura vigente.
+
+---
+
+# 11. Conclusão
+
+A PR 77 reposiciona a evolução do pipeline avançado para um eixo funcional: a integridade da resposta final.
+
+Ao fortalecer o tratamento de `correctAnswer` e consolidar o preenchimento de `correctAlternative`, o sistema ganha previsibilidade prática sem repetir ciclos anteriores de refinamento contextual.
