@@ -1,21 +1,21 @@
-# 🤖 PR 86 — Fase 2: Propagação Segura de Erros do Fluxo Avançado
+# 🤖 PR 86 — Fase 2: Guardrails de Entrada do Fluxo Avançado
 
-## Preservação da falha real dos agents sem execução indevida de etapas posteriores
+## Validação mínima do input antes da orquestração dos agents
 
 ---
 
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-86-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-test%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-propagacao%20segura%20de%20erros-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/status-ready-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Tipo](https://img.shields.io/badge/Tipo-nestjs%20slice-e11d48?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/Fase-2-f59e0b?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/Escopo-guardrails-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/Status-ready-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 > [!IMPORTANT]
-> Esta PR dá continuidade direta às PRs 84 e 85. Após adicionar observabilidade mínima e isolar falhas de logging, o foco passa a ser garantir que erros reais dos agents continuem sendo propagados corretamente, interrompendo o fluxo no ponto certo e preservando previsibilidade operacional.
+> Esta PR redireciona o próximo passo evolutivo da fase avançada para evitar redundância com as PRs 84 e 85. O foco passa a ser robustez de entrada: validar o payload mínimo antes de iniciar a orquestração dos agents, preservando recorte incremental e arquitetura vigente.
 
 ---
 
@@ -37,46 +37,39 @@
 
 # 1. Síntese Executiva
 
-O fluxo avançado já possui encadeamento funcional, observabilidade mínima e proteção contra falhas de logging.
+O fluxo avançado já possui encadeamento funcional e resiliência operacional. O próximo passo natural é impedir execução desnecessária quando a entrada mínima já é inválida.
 
-A PR 86 fecha esse ciclo reforçando um ponto complementar: falhas reais dos agents não devem ser mascaradas nem permitir execução indevida de etapas posteriores.
-
-A evolução é focada em segurança operacional do orchestrator, sem alterar contrato público, sem introduzir fallback artificial e sem redesenhar o pipeline.
+A PR 86 adiciona guardrails no `AgentsFlowOrchestratorService` para rejeitar inputs inconsistentes antes de acionar qualquer agent.
 
 ---
 
 # 2. Objetivo do PR
 
-Garantir que o `AgentsFlowOrchestratorService` preserve corretamente a propagação de erros reais das etapas internas do fluxo avançado.
+Garantir validação mínima do payload recebido pelo orchestrator.
 
 Objetivos diretos:
 
-* propagar erro de classificação sem executar etapas posteriores
-* propagar erro de resolução de IDs sem executar processamento inicial
-* propagar erro de processamento inicial sem executar composição do answer key
-* propagar erro de geração do answer key sem alterar o erro original
-* manter a separação entre erro real e falha acessória de logging
-* preservar o output final em cenários de sucesso
+- exigir `question.statement` utilizável
+- exigir `question.alternatives` como array
+- impedir execução dos agents com input inválido
+- retornar erro explícito e previsível
+- preservar contrato atual em cenários válidos
 
 ---
 
 # 3. Decisão Arquitetural
 
-A responsabilidade permanece concentrada no `AgentsFlowOrchestratorService`.
-
-A decisão é não criar fallback artificial para falhas reais dos agents. O fluxo deve parar no ponto da falha e devolver a exceção ao chamador.
+A validação permanece no próprio `AgentsFlowOrchestratorService`, na fronteira de entrada do fluxo.
 
 Não haverá:
 
-* novo agent
-* retry automático
-* circuit breaker
-* compensação assíncrona
-* fallback silencioso
-* alteração no contrato final
-* redesign do orchestrator
+- novo validator global
+- pipe customizado
+- schema externo
+- novo agent
+- redesign do pipeline
 
-O comportamento desejado é simples: **erro real interrompe o fluxo; log falhando não interrompe o fluxo**.
+A regra é simples: entrada inválida falha antes da orquestração.
 
 ---
 
@@ -84,56 +77,36 @@ O comportamento desejado é simples: **erro real interrompe o fluxo; log falhand
 
 ## Incluído
 
-* reforço dos testes de propagação de erro por etapa
-* validação de short-circuit após falha
-* garantia de não execução das etapas seguintes
-* preservação do erro original
-* manutenção da resiliência de logging introduzida na PR 85
-* preservação integral do contrato público
+- validar statement vazio/nulo/branco
+- validar alternatives como array
+- impedir chamadas aos agents quando inválido
+- testes cobrindo guardrails
+- manter output de sucesso inalterado
 
 ## Fora de Escopo
 
-* retry automático
-* política de fallback funcional
-* fila de compensação
-* persistência de falhas
-* tracing distribuído
-* alteração na arquitetura do pipeline
+- validação semântica de alternativas
+- quantidade mínima de alternativas
+- deduplicação de alternativas
+- normalização avançada de payload
+- mudanças no contrato público
 
 ---
 
 # 5. Fluxo Arquitetural
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "themeVariables": {
-    "primaryColor": "#0f172a",
-    "primaryTextColor": "#e5e7eb",
-    "primaryBorderColor": "#38bdf8",
-    "lineColor": "#64748b",
-    "secondaryColor": "#111827",
-    "tertiaryColor": "#1e293b",
-    "background": "#020617"
-  }
-}}%%
 flowchart LR
-    A[ClassificationAgent] --> B[IdResolutionAgent]
-    B --> C[InitialQuestionProcessingAgent]
-    C --> D[AnswerKeyAgent]
-    D --> E[Final Output]
-
-    A -. erro real .-> X[Stop and Propagate]
-    B -. erro real .-> X
-    C -. erro real .-> X
-    D -. erro real .-> X
+    A[Input] --> B{Payload válido?}
+    B -- Não --> X[Throw Error]
+    B -- Sim --> C[Advanced Flow]
 ```
 
 ---
 
 # 6. Contratos Mínimos
 
-Sem alteração estrutural no output final.
+Sem alteração estrutural no output final:
 
 ```ts
 {
@@ -145,22 +118,15 @@ Sem alteração estrutural no output final.
 }
 ```
 
-A evolução ocorre na garantia de comportamento em falha, não no formato do contrato público.
-
 ---
 
 # 7. Estratégia de Implementação
 
-Ordem recomendada:
+Ordem sugerida:
 
 1. `agents-flow-orchestrator.service.spec.ts`
-2. validação dos testes já existentes de erro
-3. reforço das expectativas de não execução de etapas posteriores
-4. regressão da suíte completa
-
-Princípio central:
-
-> falha real deve permanecer visível e interromper o fluxo no ponto correto.
+2. `agents-flow-orchestrator.service.ts`
+3. regressão completa
 
 ---
 
@@ -168,37 +134,30 @@ Princípio central:
 
 Validar se:
 
-* erros reais continuam sendo propagados
-* nenhuma etapa posterior roda após falha anterior
-* falha de logger continua isolada
-* não há fallback artificial
-* o contrato final permanece inalterado
-* o recorte permanece pequeno
-* não houve overengineering
+- input inválido falha antes dos agents
+- nenhum agent é executado em erro de entrada
+- mensagens de erro são objetivas
+- fluxo válido permanece igual
+- recorte pequeno mantido
 
 ---
 
 # 9. Critérios de Aceite
 
-* erro de classificação interrompe o fluxo
-* erro de resolução de IDs interrompe o fluxo
-* erro de processamento inicial interrompe o fluxo
-* erro de answer key é propagado
-* falha de logging não quebra o fluxo
-* suíte permanece verde
+- statement vazio falha
+- alternatives inválido falha
+- agents não executam em input inválido
+- suíte verde
+- comportamento atual preservado
 
 ---
 
 # 10. Impacto Esperado
 
-Maior previsibilidade operacional do fluxo avançado em cenários de falha.
-
-O sistema passa a diferenciar com clareza falhas acessórias de observabilidade e falhas reais de processamento.
+Menor processamento desnecessário, falhas mais previsíveis e fronteira de entrada mais robusta.
 
 ---
 
 # 11. Conclusão
 
-A PR 86 consolida a robustez do `AgentsFlowOrchestratorService` após as evoluções de observabilidade.
-
-Sem alterar arquitetura, contrato ou regras de negócio, o fluxo passa a garantir interrupção segura diante de erros reais e continuidade apenas quando a falha for acessória.
+A PR 86 evolui a robustez do fluxo avançado atacando o ponto correto: a qualidade mínima da entrada antes da execução do pipeline.
