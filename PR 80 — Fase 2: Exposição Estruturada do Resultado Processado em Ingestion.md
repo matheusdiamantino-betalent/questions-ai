@@ -1,6 +1,6 @@
-# 🤖 PR 80 — Fase 2: Exposição Estruturada do Resultado Processado em Ingestion
+# 🤖 PR 80 — Fase 2: Normalização Final do Output Avançado
 
-## Disponibilização funcional do output avançado no ciclo operacional de leitura
+## Consolidação estrutural e sanitização do resultado final do pipeline
 
 ---
 
@@ -9,66 +9,53 @@
 ![PR](https://img.shields.io/badge/PR-80-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-output%20estruturado%20em%20ingestion-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-output%20final%20normalizado-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-ready-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 > [!IMPORTANT]
-> Esta PR desloca o foco evolutivo da fase avançada para o ciclo operacional de ingestion. Após consolidar os campos internos do `answerKey` nas PRs 77, 78 e 79, o próximo passo passa a ser disponibilizar o resultado processado no fluxo de leitura já existente, preservando o recorte incremental e a arquitetura vigente.
+> Esta PR mantém a continuidade da fase avançada sem repetir os recortes das PRs 77, 78 e 79. Após consolidar alternativa correta, justificativa e fonte, o foco evolutivo passa a ser a qualidade estrutural do output final retornado pelo pipeline, preservando o recorte incremental e a arquitetura vigente.
 
 ---
 
-## Sumário
-
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
-
 # 1. Síntese Executiva
 
-O pipeline já produz um resultado estruturado ao final do processamento. Entretanto, a disponibilidade desse output no fluxo operacional de ingestion ainda pode ser fortalecida de forma explícita e previsível.
+O pipeline avançado já consolida os campos centrais do `answerKey`. Entretanto, o resultado final ainda pode carregar pequenas inconsistências textuais oriundas das etapas intermediárias, como espaços residuais, formatos heterogêneos e normalizações parciais.
 
-A PR 80 conecta o resultado avançado ao ciclo de leitura operacional, elevando valor funcional sem introduzir novos endpoints, novas camadas ou expansão indevida da fase 2.
+A PR 80 fortalece a previsibilidade do output final ao consolidar uma etapa mínima de sanitização e estabilidade no fechamento do resultado processado.
 
 ---
 
 # 2. Objetivo do PR
 
-Disponibilizar o resultado processado no fluxo de leitura de ingestion, reforçando a utilidade operacional do processamento assíncrono.
+Garantir que o `answerKey` final seja retornado de forma mais limpa, estável e consistente, sem alterar o contrato público já consumido pelo pipeline.
 
 Objetivos diretos:
 
-* expor o resultado estruturado já persistido no read de ingestion
-* tornar a consulta do processamento final mais previsível
-* reduzir dependência de inspeções indiretas
-* preservar o contrato principal já utilizado pelo sistema
-* evoluir o valor observável da pipeline sem alterar sua arquitetura base
+* normalizar o output final antes do retorno
+* remover espaços duplicados residuais
+* garantir trim consistente dos campos textuais
+* reforçar previsibilidade do resultado entregue
+* preservar o shape atual da resposta
+* elevar maturidade do fechamento do fluxo avançado
 
 ---
 
 # 3. Decisão Arquitetural
 
-A responsabilidade permanece nos componentes já existentes de ingestion. A evolução acontece dentro do fluxo atual, sem criação de novos módulos, novos endpoints ou novas camadas.
+A responsabilidade permanece concentrada no `AnswerKeyAgent`, ponto já responsável pela composição final do `answerKey`.
 
 Não haverá:
 
-* novo endpoint
-* novo módulo
-* redesign de ingestion
-* nova orquestração
-* dashboard operacional
+* novo agent
+* nova camada de orchestration
+* redesign do orchestrator
+* IA adicional
+* validação semântica
 * expansão estrutural da fase 2
 
-A decisão é ampliar funcionalmente o contrato já existente de leitura, reutilizando persistência e processamento já consolidados.
+A decisão é fortalecer o fechamento do output no mesmo componente já responsável por sua montagem.
 
 ---
 
@@ -76,21 +63,21 @@ A decisão é ampliar funcionalmente o contrato já existente de leitura, reutil
 
 ## Incluído
 
-* exposição do resultado estruturado no read de ingestion
-* ajuste proporcional do contrato de resposta existente
-* alinhamento entre persistência atual e retorno da consulta
-* cobertura de testes do fluxo de leitura
-* preservação do endpoint atual
-* manutenção do shape global da operação
+* sanitização final de `answerKey.justification`
+* sanitização final de `answerKey.source`
+* remoção de espaços duplicados residuais
+* trim consistente no objeto final
+* cobertura proporcional de testes unitários
+* preservação integral do contrato público
 
 ## Fora de Escopo
 
-* novo endpoint de consulta
-* histórico de versões
-* dashboard
-* analytics
-* retries avançados
-* redesign do módulo de ingestion
+* novo contrato de output
+* score de confiança
+* metadata adicional
+* validação semântica
+* novos agents
+* redesign do pipeline
 
 ---
 
@@ -110,27 +97,29 @@ A decisão é ampliar funcionalmente o contrato já existente de leitura, reutil
   }
 }}%%
 flowchart LR
-    A[IngestionProcessor] --> B[Persisted Structured Result]
-    B --> C[IngestionService.findById]
-    C --> D[Read Contract]
-    D --> E[Consumer]
+    A[Resolved Inputs] --> B[AnswerKeyAgent]
+    B --> C[Compose AnswerKey]
+    C --> D[Normalize Final Output]
+    D --> E[Return Final AnswerKey]
 ```
 
 ---
 
 # 6. Contratos Mínimos
 
-Evolução proporcional do contrato já existente.
+Sem alteração estrutural no output final.
 
 ```ts
 {
-  id,
-  status,
-  result
+  answerKey: {
+    correctAlternative,
+    justification,
+    source
+  }
 }
 ```
 
-Onde `result` passa a representar explicitamente o output estruturado já disponível no processamento concluído.
+A evolução ocorre na qualidade do conteúdo retornado, não no formato do contrato público.
 
 ---
 
@@ -138,16 +127,15 @@ Onde `result` passa a representar explicitamente o output estruturado já dispon
 
 Ordem recomendada:
 
-1. `ingestion.service.ts`
-2. `ingestion.service.spec.ts`
-3. `ingestion.dao.ts` (se necessário ajuste de mapping)
-4. `ingestion.dao.spec.ts`
-5. validação do contrato final
-6. regressão da suíte completa
+1. `answer-key.agent.ts`
+2. `answer-key.agent.spec.ts`
+3. `agents-flow-orchestrator.service.spec.ts` (apenas regressão)
+4. validação do contrato final
+5. regressão da suíte completa
 
 Princípio central:
 
-> expor valor funcional já existente sem ampliar complexidade sistêmica.
+> elevar a qualidade final do output sem ampliar complexidade sistêmica.
 
 ---
 
@@ -155,35 +143,35 @@ Princípio central:
 
 Validar se:
 
-* o resultado processado ficou disponível no read de ingestion
-* o contrato permaneceu simples e previsível
-* não houve quebra do fluxo atual
+* o output final ficou mais limpo e previsível
+* houve normalização consistente dos campos textuais
+* o contrato permaneceu inalterado
 * o recorte permaneceu pequeno
 * não houve overengineering
-* a leitura ficou mais útil operacionalmente
+* o fechamento do pipeline ficou mais maduro
 
 ---
 
 # 9. Critérios de Aceite
 
-* ingestion concluída retorna resultado estruturado
-* ingestion sem resultado continua compatível
+* `answerKey.justification` retorna normalizada
+* `answerKey.source` retorna normalizada
+* contrato final permanece compatível
 * testes permanecem verdes
-* nenhuma regressão no fluxo assíncrono
-* endpoint atual permanece funcional
+* nenhuma regressão no orchestrator
 
 ---
 
 # 10. Impacto Esperado
 
-Maior valor operacional no ciclo de ingestion, permitindo consultar diretamente o resultado final do processamento sem depender de mecanismos indiretos.
+Maior previsibilidade e qualidade prática no resultado final entregue pelo pipeline.
 
-O sistema evolui da consolidação interna dos agents para a entrega prática do output processado.
+O sistema evolui de consolidação funcional dos campos para maturidade estrutural do output processado.
 
 ---
 
 # 11. Conclusão
 
-A PR 80 reposiciona a continuidade da fase 2 para um eixo operacional: disponibilizar o resultado já produzido pelo pipeline.
+A PR 80 encerra um ciclo importante da fase avançada: após consolidar os campos centrais do `answerKey`, o foco passa a ser a consistência final do que é efetivamente entregue ao consumidor.
 
-Sem alterar a arquitetura vigente, o sistema passa a entregar de forma mais clara e útil o valor gerado pelo processamento avançado.
+Sem alterar arquitetura ou contrato público, o pipeline passa a retornar um resultado mais estável, limpo e confiável.
