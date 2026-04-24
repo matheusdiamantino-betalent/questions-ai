@@ -19,6 +19,20 @@
 
 ---
 
+## Sumário
+
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Objetivo do PR](#2-objetivo-do-pr)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo](#4-escopo)
+5. [Fora de Escopo](#5-fora-de-escopo)
+6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
+7. [Contratos Mínimos](#7-contratos-mínimos)
+8. [Regras de Implementação](#8-regras-de-implementação)
+9. [Critérios de Review](#9-critérios-de-review)
+10. [Critérios de Aceite](#10-critérios-de-aceite)
+11. [Conclusão](#11-conclusão)
+
 # 1. Síntese Executiva
 
 O pipeline avançado já produz `metadata` como parte do output final. Entretanto, campos textuais classificados ainda podem carregar espaços residuais, valores vazios normalizados de forma inconsistente ou pequenas variações de formatação.
