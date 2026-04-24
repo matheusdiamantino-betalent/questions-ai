@@ -17,11 +17,11 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR fortalece a composição final de `adaptedStatement` no fluxo avançado, preservando arquitetura e contrato público.
+> Esta PR fortalece a composição final de `adaptedStatement` no fluxo avançado, preservando arquitetura vigente e contrato público.
 >
-> - consolida montagem final do statement
-> - reduz ruído estrutural
-> - mantém compatibilidade do output
+> - consolida a montagem final do statement adaptado
+> - reduz ruído textual no output
+> - mantém compatibilidade com consumidores atuais
 >
 > **Este PR não adiciona novos agentes, novos contratos ou redesign do pipeline.**
 
@@ -41,13 +41,13 @@
 
 # 1. Síntese Executiva
 
-Após a evolução de partes centrais do resultado avançado, o próximo passo mínimo foi fortalecer a montagem final de `adaptedStatement`, campo já existente e relevante para o consumo downstream.
+Após a consolidação de `answerKey`, o próximo passo mínimo foi fortalecer a montagem final de `adaptedStatement`, campo já existente no contrato e essencial para o consumo do resultado avançado.
 
-A mudança consolida a composição no ponto correto do fluxo, elevando previsibilidade sem ampliar escopo funcional.
+A mudança atua sobre a consistência do texto final retornado, preservando o fluxo já aprovado e evitando qualquer expansão indevida da fase 2.
 
 # 2. Objetivo do PR
 
-- consolidar composição final de `adaptedStatement`
+- consolidar a composição final de `adaptedStatement`
 - reduzir ruídos textuais residuais
 - preservar compatibilidade do contrato público
 - manter progressão incremental da fase 2
@@ -61,6 +61,7 @@ A responsabilidade permanece no componente já encarregado da adaptação do enu
 - ajuste da composição final de `adaptedStatement`
 - normalização proporcional do texto final
 - testes unitários compatíveis com o slice
+- preservação integral do output avançado
 
 # 5. Fora de Escopo
 
@@ -69,14 +70,61 @@ A responsabilidade permanece no componente já encarregado da adaptação do enu
 - alteração de contratos
 - redesign do pipeline
 - expansão da fase 2
+- foundation paralela para adaptação de enunciado
 
 # 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
+}}%%
 flowchart LR
-A["Input"] --> B["StatementAdaptationAgent"]
-B --> C["Composição Final"]
-C --> D["Output.adaptedStatement"]
+    A["Input Processado"] --> B["StatementAdaptationAgent"]
+    B --> C["Composição Final"]
+    C --> D["Output.adaptedStatement"]
+
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step7 fill:#10243a,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef step8 fill:#221b2f,stroke:#f472b6,stroke-width:2px,color:#ffffff;
+    classDef step9 fill:#14281d,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef step10 fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef step11 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef foundationBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef coreBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B step2;
+    class C step3;
+    class D outputBox;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
 ```
 
 # 7. Contratos Mínimos
@@ -92,27 +140,33 @@ Sem alteração estrutural no contrato final.
 }
 ```
 
+A evolução ocorre apenas na consistência do valor de `adaptedStatement`, sem expansão estrutural do contrato.
+
 # 8. Regras de Implementação
 
-- concentrar ajuste no agente existente
+- concentrar o ajuste no agente existente
 - evitar abstrações adicionais
 - manter orchestrator fora do recorte
-- preservar simplicidade
+- preservar simplicidade e legibilidade
+- não preparar próximos passos dentro desta PR
 
 # 9. Critérios de Review
 
-- statement final está mais consistente
-- contrato permanece igual
-- recorte segue pequeno
-- ausência de overengineering
+- `adaptedStatement` final está mais consistente
+- contrato público permanece igual
+- recorte segue pequeno e objetivo
+- não há overengineering
+- não há fragmentação desnecessária do fluxo
 
 # 10. Critérios de Aceite
 
 - [ ] `adaptedStatement` retorna composição consolidada
-- [ ] compatibilidade preservada
-- [ ] testes verdes
-- [ ] nenhuma regressão no fluxo avançado
+- [ ] compatibilidade do contrato é preservada
+- [ ] testes unitários permanecem verdes
+- [ ] nenhuma regressão é introduzida no fluxo avançado
 
 # 11. Conclusão
 
-A PR 81 mantém a progressão incremental da fase 2 ao fortalecer `adaptedStatement` sem ampliar arquitetura ou escopo.
+A PR 81 mantém a progressão incremental da fase 2 ao fortalecer `adaptedStatement` sem ampliar arquitetura, contrato ou escopo.
+
+O ganho é pontual e funcional: entregar um statement final mais previsível, mantendo o fluxo simples e revisável.
