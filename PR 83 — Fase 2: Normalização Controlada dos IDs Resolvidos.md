@@ -6,122 +6,116 @@
 
 <div align="left">
 
-![PR](https://img.shields.io/badge/PR-83-2563eb?style=for-the-badge\&logo=gitpullrequest\&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge\&logo=nestjs\&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-2-0f766e?style=for-the-badge\&logo=dependabot\&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-ids%20normalizados-0891b2?style=for-the-badge\&logo=serverless\&logoColor=white)
-![Status](https://img.shields.io/badge/status-ready-16a34a?style=for-the-badge\&logo=githubactions\&logoColor=white)
+![PR](https://img.shields.io/badge/PR-83-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
+![Tipo](https://img.shields.io/badge/Tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/Fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/Escopo-ids%20normalizados-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/Status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
-> [!IMPORTANT]
-> Esta PR dá continuidade à fase avançada em um novo eixo funcional. Após consolidar `answerKey`, `adaptedStatement` e `metadata`, o foco evolutivo passa a ser a consistência estrutural dos identificadores resolvidos, preservando o recorte incremental e a arquitetura vigente.
-
 ---
+
+> [!IMPORTANT]
+> Esta PR evolui o bloco `ids` do resultado avançado com normalização controlada dos identificadores já resolvidos, sem alterar arquitetura ou contrato público.
+>
+> - remove espaços residuais
+> - converte valores vazios em `null`
+> - preserva compatibilidade estrutural existente
+>
+> **Este PR não introduz novos IDs, novo lookup ou redesign do pipeline.**
 
 ## Sumário
 
-1. [Síntese Executiva](#1-síntese-executiva)
-2. [Objetivo do PR](#2-objetivo-do-pr)
-3. [Decisão Arquitetural](#3-decisão-arquitetural)
-4. [Escopo](#4-escopo)
-5. [Fora de Escopo](#5-fora-de-escopo)
-6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
-7. [Contratos Mínimos](#7-contratos-mínimos)
-8. [Regras de Implementação](#8-regras-de-implementação)
-9. [Critérios de Review](#9-critérios-de-review)
-10. [Critérios de Aceite](#10-critérios-de-aceite)
-11. [Conclusão](#11-conclusão)
+1. Síntese Executiva
+2. Objetivo do PR
+3. Decisão Arquitetural
+4. Escopo
+5. Fora de Escopo
+6. Fluxo Arquitetural
+7. Contratos Mínimos
+8. Regras de Implementação
+9. Critérios de Review
+10. Critérios de Aceite
+11. Conclusão
 
 # 1. Síntese Executiva
 
-O pipeline avançado já produz `ids` como parte do output final. Entretanto, identificadores resolvidos podem carregar espaços residuais, valores vazios ou pequenas inconsistências estruturais após lookup e fallback.
+As PRs anteriores consolidaram partes centrais do output avançado, como `answerKey`, `adaptedStatement` e `metadata`. O próximo passo mínimo consiste em elevar a consistência do bloco `ids`, já presente no contrato final.
 
-A PR 83 fortalece a previsibilidade do bloco `ids` ao consolidar uma normalização controlada dos identificadores retornados.
-
----
+A mudança trata ruídos residuais de normalização após resolução e fallback, aumentando previsibilidade para consumidores downstream sem expandir escopo funcional.
 
 # 2. Objetivo do PR
 
-Garantir que os identificadores resolvidos do fluxo avançado sejam retornados de forma estável, limpa e consistente, sem alterar o contrato público já consumido pelo pipeline.
-
-Objetivos diretos:
-
-* normalizar strings de `ids`
-* remover espaços residuais
-* converter valores vazios em `null`
-* preservar IDs sintéticos existentes
-* reforçar previsibilidade estrutural do output final
-* evoluir outro eixo funcional sem repetir ciclos anteriores
-
----
+- normalizar strings dos identificadores resolvidos
+- remover espaços residuais
+- converter valores vazios em `null`
+- preservar IDs sintéticos existentes
+- manter o contrato público inalterado
 
 # 3. Decisão Arquitetural
 
-A responsabilidade permanece no `IdResolutionAgent`, componente já responsável por resolver e consolidar identificadores do fluxo.
+A responsabilidade permanece no `IdResolutionAgent`, componente já encarregado da resolução e consolidação dos identificadores.
 
-Não haverá:
+A evolução ocorre no ponto correto do fluxo já aprovado, sem novos agentes, novas camadas, mudanças de DAO ou reorquestração.
 
-* novo agent
-* nova camada de orchestration
-* redesign do orchestrator
-* alteração de DAO
-* cache adicional
-* expansão estrutural da fase 2
+# 4. Escopo
 
-A decisão é fortalecer a normalização no mesmo componente já responsável pela resolução de IDs.
+- normalização de `bankId`
+- normalização de `lawId`
+- normalização de `articleId`
+- normalização de `yearId`
+- normalização de demais campos já existentes em `ids`
+- testes unitários proporcionais ao slice
 
----
+# 5. Fora de Escopo
 
-# 4. Escopo da PR
+- novos identificadores
+- nova estratégia de lookup
+- cache adicional
+- alteração de contratos públicos
+- redesign do pipeline
+- expansão estrutural da fase 2
 
-## Incluído
-
-* normalização de `bankId`
-* normalização de `lawId`
-* normalização de `articleId`
-* normalização de `yearId`
-* normalização de demais ids existentes no contrato
-* transformação de valores vazios em `null`
-* cobertura proporcional de testes unitários
-* preservação integral do contrato público
-
-## Fora de Escopo
-
-* nova estratégia de lookup
-* novos identificadores
-* alteração de DAO
-* cache distribuído
-* redesign do pipeline
-* expansão indevida da fase 2
-
----
-
-# 5. Fluxo Arquitetural
+# 6. Fluxo Arquitetural
 
 ```mermaid
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "primaryColor": "#0f172a",
-    "primaryTextColor": "#e5e7eb",
-    "primaryBorderColor": "#38bdf8",
-    "lineColor": "#64748b",
-    "secondaryColor": "#111827",
-    "tertiaryColor": "#1e293b",
-    "background": "#020617"
-  }
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8"
+  },
+  "flowchart": { "curve": "linear" }
 }}%%
 flowchart LR
-    A[Metadata] --> B[IdResolutionAgent]
-    B --> C[Resolved IDs]
-    C --> D[Normalize IDs]
-    D --> E[Output.ids]
+    A["Metadata"] --> B["IdResolutionAgent"]
+    B --> C["IDs Resolvidos"]
+    C --> D["Normalização"]
+    D --> E["Output.ids"]
+
+classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+classDef step5 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+class A step1;
+class B step2;
+class C step3;
+class D step4;
+class E step5;
+
+linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+linkStyle 3 stroke:#9ca3af,stroke-width:2px;
 ```
 
----
-
-# 6. Contratos Mínimos
+# 7. Contratos Mínimos
 
 Sem alteração estrutural no output final.
 
@@ -134,57 +128,34 @@ Sem alteração estrutural no output final.
 }
 ```
 
-A evolução ocorre na consistência dos valores retornados em `ids`, não na expansão do contrato público.
+A evolução incide apenas na consistência dos valores retornados em `ids`.
 
----
+# 8. Regras de Implementação
 
-# 7. Estratégia de Implementação
+- controller e orchestrator permanecem inalterados
+- ajuste concentrado no `IdResolutionAgent`
+- sem abstrações adicionais
+- sem preparar próximas fases dentro desta PR
+- priorizar simplicidade e legibilidade
 
-Ordem recomendada:
+# 9. Critérios de Review
 
-1. `id-resolution.agent.ts`
-2. `id-resolution.agent.spec.ts`
-3. regressão da suíte completa
+- IDs retornam de forma mais limpa e previsível
+- valores vazios são convertidos para `null`
+- compatibilidade foi preservada
+- recorte continua pequeno e objetivo
+- ausência de overengineering
 
-Princípio central:
+# 10. Critérios de Aceite
 
-> elevar a consistência estrutural dos identificadores sem ampliar complexidade sistêmica.
-
----
-
-# 8. Critérios de Review
-
-Validar se:
-
-* os IDs ficaram mais limpos e previsíveis
-* valores vazios passam a ser `null`
-* IDs sintéticos foram preservados
-* o contrato final permaneceu inalterado
-* o recorte permaneceu pequeno
-* não houve overengineering
-
----
-
-# 9. Critérios de Aceite
-
-* campos de ids retornam normalizados
-* campos vazios não poluem o output
-* IDs existentes permanecem compatíveis
-* testes permanecem verdes
-* nenhuma regressão no fluxo avançado
-
----
-
-# 10. Impacto Esperado
-
-Maior consistência prática no bloco `ids` do output avançado, reduzindo ruído estrutural para consumidores downstream.
-
-O sistema evolui além de `answerKey`, `adaptedStatement` e `metadata`, fortalecendo outro eixo central do resultado processado.
-
----
+- [ ] campos de `ids` retornam normalizados
+- [ ] valores vazios não poluem o output
+- [ ] IDs existentes seguem compatíveis
+- [ ] testes permanecem verdes
+- [ ] nenhuma regressão no fluxo avançado
 
 # 11. Conclusão
 
-A PR 83 mantém a progressão madura da fase avançada ao atacar outro componente relevante do output final: os identificadores resolvidos.
+A PR 83 mantém a progressão incremental da fase 2 ao fortalecer um eixo relevante do resultado final: a consistência dos identificadores resolvidos.
 
-Sem alterar arquitetura ou contrato público, o pipeline passa a entregar `ids` mais limpos, consistentes e confiáveis.
+Sem ampliar arquitetura ou contratos, o pipeline passa a entregar `ids` mais estáveis, limpos e confiáveis.
