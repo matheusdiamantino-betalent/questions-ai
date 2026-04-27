@@ -7,30 +7,11 @@
 
 ![PR](https://img.shields.io/badge/PR-06-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/tipo-auth%20delegado-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
 ![Escopo](https://img.shields.io/badge/escopo-identidade%20remota%20e%20prote%C3%A7%C3%A3o%20http-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
 ![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
-
----
-
-## Sumário
-
-- [1. Síntese executiva](#1-síntese-executiva)
-- [2. Contexto e objetivo](#2-contexto-e-objetivo)
-- [3. Decisão arquitetural](#3-decisão-arquitetural)
-- [4. Escopo e fora de escopo](#4-escopo-e-fora-de-escopo)
-- [5. Contratos](#5-contratos)
-- [6. Estrutura técnica](#6-estrutura-técnica)
-- [7. Fluxo do auth delegado](#7-fluxo-do-auth-delegado)
-- [8. Responsabilidades por arquivo](#8-responsabilidades-por-arquivo)
-- [9. Environment e configuração](#9-environment-e-configuração)
-- [10. Regras de simplicidade aplicadas](#10-regras-de-simplicidade-aplicadas)
-- [11. Segurança e falha](#11-segurança-e-falha)
-- [12. Rotas técnicas](#12-rotas-técnicas)
-- [13. Critérios de aceite](#13-critérios-de-aceite)
-- [14. Conclusão](#14-conclusão)
 
 ---
 
@@ -43,11 +24,30 @@
 > - reduzir localmente o payload autenticado para `request.user.id`;
 > - proteger rotas HTTP locais.
 >
-> Este PR **não** implementa autorização local por role/scope, cache, retry avançado, circuit breaker, decorators customizados ou expansão prematura do slice.
+> **Este PR não implementa autorização local por role/scope, cache, retry avançado, circuit breaker, decorators customizados ou expansão prematura do slice.**
 
 ---
 
-## 1. Síntese executiva
+## 📚 Sumário
+
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Contexto e Objetivo](#2-contexto-e-objetivo)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo e Fora de Escopo](#4-escopo-e-fora-de-escopo)
+5. [Contratos](#5-contratos)
+6. [Estrutura Técnica](#6-estrutura-técnica)
+7. [Fluxo do Auth Delegado](#7-fluxo-do-auth-delegado)
+8. [Responsabilidades por Arquivo](#8-responsabilidades-por-arquivo)
+9. [Environment e Configuração](#9-environment-e-configuração)
+10. [Regras de Simplicidade Aplicadas](#10-regras-de-simplicidade-aplicadas)
+11. [Segurança e Falha](#11-segurança-e-falha)
+12. [Rotas Técnicas](#12-rotas-técnicas)
+13. [Critérios de Aceite](#13-critérios-de-aceite)
+14. [Conclusão](#14-conclusão)
+
+---
+
+## 1. Síntese Executiva
 
 A API principal continua sendo a autoridade de autenticação e identidade administrativa do ecossistema.
 
@@ -71,7 +71,7 @@ API de IA protege a borda HTTP local.
 
 ---
 
-## 2. Contexto e objetivo
+## 2. Contexto e Objetivo
 
 A API principal já possui autenticação administrativa própria e permanece como fonte da verdade para identidade.
 
@@ -97,7 +97,7 @@ A API de IA:
 
 ---
 
-## 3. Decisão arquitetural
+## 3. Decisão Arquitetural
 
 ### Decisão central
 
@@ -124,7 +124,7 @@ A API de IA reduz apenas request.user ao mínimo necessário.
 
 ---
 
-## 4. Escopo e fora de escopo
+## 4. Escopo e Fora de Escopo
 
 ### Escopo deste PR
 
@@ -210,7 +210,7 @@ MainApiV1AdminProfileResponse
 
 ---
 
-## 6. Estrutura técnica
+## 6. Estrutura Técnica
 
 ### Estrutura final do slice
 
@@ -257,43 +257,75 @@ src/
 
 ---
 
-## 7. Fluxo do auth delegado
+## 7. Fluxo do Auth Delegado
 
 ```mermaid
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "background": "#090d1a",
-    "primaryColor": "#111827",
-    "primaryTextColor": "#f8fafc",
-    "primaryBorderColor": "#a78bfa",
-    "lineColor": "#38bdf8",
-    "secondaryColor": "#0f172a",
-    "secondaryTextColor": "#f9a8d4",
-    "secondaryBorderColor": "#ec4899",
-    "tertiaryColor": "#111827",
-    "tertiaryTextColor": "#86efac",
-    "tertiaryBorderColor": "#22c55e",
-    "fontFamily": "Inter, Segoe UI, Arial"
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 30,
+    "rankSpacing": 42
   }
 }}%%
 flowchart TD
-    A["🧑‍💼 Request com bearer"] --> B["🛡️ AuthGuard"]
-    B --> C["⚙️ AuthService"]
-    C --> D["🌐 AuthApiClient"]
-    D --> E["🏛️ GET /api/v1/profile"]
-    E --> F["📦 MainApiV1AdminProfileResponse"]
-    F --> G["🔎 validação local do id"]
-    G --> H["👤 AuthenticatedUser"]
-    H --> I["📌 request.user.id"]
-    I --> J["✅ Request protegida"]
+    A["Request com bearer"] --> B["AuthGuard"]
+    B --> C["AuthService"]
+    C --> D["AuthApiClient"]
+    D --> E["GET /api/v1/profile"]
+    E --> F["MainApiV1AdminProfileResponse"]
+    F --> G["Validação local do id"]
+    G --> H["AuthenticatedUser"]
+    H --> I["request.user.id"]
+    I --> J["Request protegida"]
 
-    style J fill:#071910,stroke:#22c55e,stroke-width:2px,color:#dcfce7
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef step7 fill:#10243a,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef step8 fill:#221b2f,stroke:#f472b6,stroke-width:2px,color:#ffffff;
+    classDef step9 fill:#14281d,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef step10 fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B step2;
+    class C step3;
+    class D step4;
+    class E step5;
+    class F step6;
+    class G step7;
+    class H step8;
+    class I step9;
+    class J step10;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 5 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 6 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 7 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 8 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ---
 
-## 8. Responsabilidades por arquivo
+## 8. Responsabilidades por Arquivo
 
 ### `src/modules/auth/model/v1/auth.contracts.ts`
 
@@ -378,7 +410,7 @@ Responsável por:
 
 ---
 
-## 9. Environment e configuração
+## 9. Environment e Configuração
 
 O projeto mantém configuração centralizada em `environment.ts`.
 
@@ -401,7 +433,7 @@ MAIN_API_V1_URL=http://localhost:3333
 
 ---
 
-## 10. Regras de simplicidade aplicadas
+## 10. Regras de Simplicidade Aplicadas
 
 Este PR foi ajustado para refletir o feedback técnico recebido e o padrão aprovado do projeto.
 
@@ -425,7 +457,7 @@ Este PR foi ajustado para refletir o feedback técnico recebido e o padrão apro
 
 ---
 
-## 11. Segurança e falha
+## 11. Segurança e Falha
 
 ### Regras de segurança
 
@@ -451,7 +483,7 @@ Este PR foi ajustado para refletir o feedback técnico recebido e o padrão apro
 
 ---
 
-## 12. Rotas técnicas
+## 12. Rotas Técnicas
 
 ```http
 GET /health/live
@@ -465,7 +497,7 @@ GET /health/protected
 
 ---
 
-## 13. Critérios de aceite
+## 13. Critérios de Aceite
 
 ### Funcionais
 
