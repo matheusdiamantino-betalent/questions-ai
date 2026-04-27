@@ -19,7 +19,7 @@
 > [!IMPORTANT]
 > Esta PR evolui a observabilidade operacional do fluxo avançado ao registrar a execução de cada etapa com contexto mínimo e padronização.
 >
-> - loga início e fim por etapa
+> - registra início e fim por etapa
 > - adiciona duração simples da execução
 > - preserva contrato atual em cenários válidos
 >
@@ -47,11 +47,11 @@ A PR 90 adiciona logs estruturados no `AgentsFlowOrchestratorService`, permitind
 
 # 2. Objetivo do PR
 
-- registrar início de cada agent
-- registrar sucesso de cada agent
+- registrar início de cada etapa
+- registrar sucesso de cada etapa
 - registrar falha com contexto mínimo
-- medir duração simples por etapa
-- correlacionar execução por identificador
+- medir duração por etapa
+- correlacionar a execução por identificador
 - preservar contrato atual em cenários válidos
 
 # 3. Decisão Arquitetural
@@ -83,49 +83,16 @@ A decisão evita espalhar logs excessivos dentro dos agents e mantém a observab
 # 6. Fluxo Arquitetural
 
 ```mermaid
-%%{init: {
-  "theme": "base",
-  "themeVariables": {
-    "background": "#050b16",
-    "primaryColor": "#0b1220",
-    "primaryTextColor": "#ffffff",
-    "primaryBorderColor": "#22d3ee",
-    "lineColor": "#94a3b8",
-    "secondaryColor": "#0b1220",
-    "tertiaryColor": "#0b1220",
-    "fontFamily": "Inter, Arial, sans-serif"
-  },
-  "flowchart": {
-    "htmlLabels": true,
-    "curve": "linear",
-    "nodeSpacing": 34,
-    "rankSpacing": 44
-  }
-}}%%
 flowchart LR
-    A["Start"] --> B["Log Begin"]
-    B --> C["Run Agent"]
-    C --> D{"Erro?"}
-    D -->|Não| E["Log Success + Duration"]
-    D -->|Sim| F["Log Failure"]
-    E --> G["Próxima Etapa"]
-    F --> H["Throw Error"]
-
-    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
-    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
-    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
-    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
-    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
-    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
-
-    class A step1;
-    class B step2;
-    class C step3;
-    class D decision;
-    class E successBox;
-    class F failureBox;
-    class G step2;
-    class H failureBox;
+    A[Inicio] --> B[Log Inicio]
+    B --> C[Executa Etapa]
+    C --> D{Erro}
+    D -->|Nao| E[Log Sucesso]
+    E --> F[Tempo Etapa]
+    F --> G[Proxima Etapa]
+    G --> H[Output Final]
+    D -->|Sim| I[Log Falha]
+    I --> J[Erro Controlado]
 ```
 
 # 7. Contratos Mínimos
