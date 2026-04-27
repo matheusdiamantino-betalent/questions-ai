@@ -6,353 +6,216 @@
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-07-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/tipo-propaga%C3%A7%C3%A3o%20de%20identidade-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/fase-1-0f766e?style=for-the-badge&logo=target&logoColor=white)
-![Escopo](https://img.shields.io/badge/escopo-primeiro%20uso%20real%20do%20auth-0891b2?style=for-the-badge&logo=shield&logoColor=white)
-![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Tipo](https://img.shields.io/badge/Tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/Fase-1-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/Escopo-primeiro%20uso%20real%20do%20auth-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/Status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> Este PR **não evolui o módulo de auth**.
+> Este PR aplica a foundation da autenticação no primeiro fluxo funcional do domínio.
 >
-> Ele apenas aplica a foundation da **PR 06** no primeiro caso de uso real:
+> - protege o endpoint funcional de `ingestion`
+> - consome `request.user.id`
+> - propaga `userId` explicitamente ao service
+> - registra autoria mínima da operação
 >
-> - proteger o primeiro endpoint funcional de `ingestion`
-> - consumir `request.user.id`
-> - propagar `userId` explicitamente até a camada de serviço
-> - registrar **quem iniciou a operação**
->
-> O objetivo é validar o primeiro uso real da identidade autenticada **sem abstração prematura**.
+> **Este PR não expande auth, não cria abstrações transversais e não reabre decisões da PR 06.**
 
 ---
 
-## 1. Sumário
+## 📚 Sumário
 
-- [1. Sumário](#1-sumário)
-- [2. Síntese Executiva](#2-síntese-executiva)
-- [3. Decisão Arquitetural](#3-decisão-arquitetural)
-- [4. Por que `ingestion` agora?](#4-por-que-ingestion-agora)
-- [5. Escopo](#5-escopo)
-- [6. Fora de Escopo](#6-fora-de-escopo)
-- [7. Fluxo Arquitetural](#7-fluxo-arquitetural)
-- [8. Estrutura Proposta do PR](#8-estrutura-proposta-do-pr)
-- [9. Boundary e Propagação](#9-boundary-e-propagação)
-- [10. Regras de Implementação](#10-regras-de-implementação)
-- [11. Critérios de Review](#11-critérios-de-review)
-- [12. Critérios de Aceite](#12-critérios-de-aceite)
-- [13. Conclusão](#13-conclusão)
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Objetivo do PR](#2-objetivo-do-pr)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo](#4-escopo)
+5. [Fora de Escopo](#5-fora-de-escopo)
+6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
+7. [Contratos Mínimos](#7-contratos-mínimos)
+8. [Regras de Implementação](#8-regras-de-implementação)
+9. [Critérios de Review](#9-critérios-de-review)
+10. [Critérios de Aceite](#10-critérios-de-aceite)
+11. [Conclusão](#11-conclusão)
 
 ---
 
-## 2. Síntese Executiva
+## 1. Síntese Executiva
 
-A **PR 06** resolveu a foundation mínima do auth delegado:
+A PR 06 consolidou a foundation mínima do auth delegado: validação do bearer token na borda, consulta da identidade administrativa na API principal e exposição local apenas de `request.user.id`.
 
-- receber `Authorization: Bearer <token>`
-- consultar a identidade administrativa na API principal
-- validar o usuário autenticado
-- expor localmente apenas `request.user.id`
+Com essa base aprovada, o próximo passo correto não é expandir auth. O próximo passo é usar essa identidade em um fluxo real da aplicação. Esta PR faz isso no módulo de `ingestion`, que é o boundary onde a operação nasce e onde a autoria mínima precisa ser registrada.
 
-Com essa foundation pronta, o próximo passo correto não é expandir auth.
+---
 
-O próximo passo correto é **usar essa identidade em um fluxo real da aplicação**.
+## 2. Objetivo do PR
 
-Este PR propõe exatamente isso:
+Este PR tem como objetivo aplicar a identidade autenticada no primeiro caso de uso funcional do domínio:
 
-- aplicar `AuthGuard` no primeiro endpoint funcional de `ingestion`
-- ler `request.user.id` no controller
-- propagar `userId` explicitamente ao service
-- persistir **quem iniciou a operação**
+- proteger o endpoint inicial de `ingestion` com `AuthGuard`;
+- ler `request.user.id` no controller;
+- propagar `userId` explicitamente ao service;
+- registrar `initiatedByUserId` na operação criada.
 
 ---
 
 ## 3. Decisão Arquitetural
 
-A decisão deste PR é simples:
+A decisão central é manter a arquitetura aprovada na PR 06 e apenas atravessar a identidade autenticada para o primeiro boundary de domínio.
+
+O controller continua sendo o ponto de adaptação HTTP. O service recebe somente o dado necessário para abrir a operação. O módulo de auth permanece isolado e não é reestruturado neste recorte.
 
 > **PR 06 autentica a borda.  
-> PR 07 faz a identidade autenticada atravessar o primeiro boundary de domínio.**
-
-A intenção aqui não é criar uma solução transversal de identidade.
-
-A intenção é validar o primeiro uso real da foundation já entregue.
-
-### Princípio aplicado
-
-- **usar antes de abstrair**
-- **validar antes de generalizar**
-- **persistir o mínimo necessário**
-- **não sofisticar antes do segundo caso real**
+> PR 07 faz a identidade autenticada entrar no primeiro fluxo real.**
 
 ---
 
-## 4. Por que `ingestion` agora?
+## 4. Escopo
 
-`Ingestion` é o melhor módulo para iniciar essa propagação porque ele representa o **ponto de entrada operacional do pipeline**.
+Este PR inclui somente:
 
-É nesse boundary que a aplicação:
-
-- recebe uma requisição autenticada
-- abre uma operação
-- associa essa operação a quem a iniciou
-
-Portanto, `ingestion` é o lugar mais natural para introduzir o primeiro uso real de `request.user.id`.
-
-### O que isso valida
-
-- que a identidade autenticada resolvida na borda é útil no domínio
-- que o pipeline nasce com autoria mínima registrada
-- que a propagação de identidade pode acontecer sem request context global
-- que o service pode receber apenas `userId`, sem acoplamento ao request
-
-### Por que não outro módulo?
-
-| Módulo | Motivo para não iniciar por ele |
-|---|---|
-| `processing` | já pressupõe uma operação iniciada |
-| `extraction` | já é etapa interna |
-| `classification` | não é boundary de entrada |
-| `publication` | ocorre depois no fluxo |
-| `auth` | já foi tratado na PR 06 |
-
-**Conclusão:**  
-Se a intenção é validar o primeiro uso real da identidade autenticada, `ingestion` é o boundary correto.
+- aplicação do `AuthGuard` no endpoint funcional de `ingestion`;
+- leitura explícita de `request.user.id`;
+- propagação de `userId` para o service;
+- persistência mínima da autoria da operação.
 
 ---
 
-## 5. Escopo
+## 5. Fora de Escopo
 
-Este PR inclui:
+Este PR não inclui:
 
-- proteção do primeiro endpoint funcional de `ingestion` com `AuthGuard`
-- leitura de `request.user.id` no controller
-- propagação explícita de `userId` ao service
-- persistência mínima da autoria da abertura da operação
-
----
-
-## 6. Fora de Escopo
-
-Este PR **não** inclui:
-
-- mudanças estruturais no módulo `auth`
-- `CurrentUser` decorator
-- request context global
-- abstração genérica de propagation de identidade
-- roles/scopes locais
-- enriquecimento de `request.user`
-- expansão do contrato interno de usuário
-- pipeline completo
-- BullMQ
-- processing assíncrono
-- extraction
-- classification
-- quality
-- publication
-- audit completo
-- solução transversal entre múltiplos módulos
-
-> [!NOTE]
-> A regra aqui é objetiva:
->
-> **não generalizar antes do segundo caso real.**
+- mudanças estruturais no módulo `auth`;
+- decorator `CurrentUser`;
+- request context global;
+- roles/scopes locais;
+- enriquecimento do contrato interno de usuário;
+- pipeline assíncrono completo;
+- BullMQ;
+- extraction, classification, quality ou publication;
+- auditoria expandida;
+- solução transversal para múltiplos módulos.
 
 ---
 
-## 7. Fluxo Arquitetural
+## 6. Fluxo Arquitetural
 
 ```mermaid
 %%{init: {
   "theme": "base",
   "themeVariables": {
-    "background": "#0b1220",
-    "primaryColor": "#111827",
-    "primaryTextColor": "#e5f7ff",
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
     "primaryBorderColor": "#22d3ee",
-    "lineColor": "#38bdf8",
-    "secondaryColor": "#0f172a",
-    "tertiaryColor": "#111827",
-    "fontFamily": "Inter, Segoe UI, Arial",
-    "clusterBkg": "#0f172a",
-    "clusterBorder": "#22d3ee",
-    "nodeBorder": "#22d3ee",
-    "mainBkg": "#111827"
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 48,
+    "rankSpacing": 56
   }
 }}%%
-
 flowchart LR
-    A[HTTP Request<br/>Authorization Bearer] --> B[AuthGuard]
-    B --> C[request.user.id]
-    C --> D[IngestionController]
-    D --> E[IngestionService]
-    E --> F[Create Operation]
-    F --> G[Persist initiatedByUserId]
+    A["HTTP Request<br/>Authorization Bearer"] --> B["AuthGuard"]
+    B --> C["request.user.id"]
+    C --> D["IngestionController"]
+    D --> E["IngestionService"]
+    E --> F["Persistir<br/>initiatedByUserId"]
 
-    classDef cyan fill:#0f172a,stroke:#22d3ee,color:#e0f7ff,stroke-width:1.5px;
-    classDef violet fill:#111827,stroke:#a78bfa,color:#f3e8ff,stroke-width:1.5px;
-    classDef green fill:#052e16,stroke:#22c55e,color:#dcfce7,stroke-width:1.5px;
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
 
-    class A,B,C,D cyan;
-    class E,F violet;
-    class G green;
+    class A step1;
+    class B step2;
+    class C step3;
+    class D step4;
+    class E step5;
+    class F step6;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
 ```
 
 ---
 
-## 8. Estrutura Proposta do PR
+## 7. Contratos Mínimos
 
-> [!IMPORTANT]
-> A árvore abaixo mostra **apenas o recorte novo da PR 07**.
->
-> O módulo `auth` já foi descrito e consolidado na **PR 06**, então não é repetido aqui.
-
-```text
-src/
-└── modules/
-    └── ingestion/
-        ├── ingestion.module.ts
-        ├── infra/
-        │   ├── controllers/
-        │   │   └── ingestion.controller.ts
-        │   └── services/
-        │       └── ingestion.service.ts
-        └── model/
-            └── v1/
-                └── ingestion.types.ts
-```
-
----
-
-## 9. Boundary e Propagação
-
-### Controller
-
-O controller recebe a request já autenticada e usa apenas o dado necessário:
+O contrato mínimo passa a carregar o identificador do usuário autenticado até a abertura da operação:
 
 ```ts
-request.user.id
+export type CreateIngestionInput = {
+  userId: number;
+  payload: unknown;
+};
 ```
 
-### Propagação proposta
+A persistência da operação deve refletir a autoria mínima:
 
 ```ts
-@Post()
-@UseGuards(AuthGuard)
-create(@Req() request: Request) {
-  return this.ingestionService.create({
-    userId: request.user.id,
-  });
-}
-```
-
-### Service
-
-O service não deve conhecer a request HTTP.
-
-Ele deve receber apenas o dado necessário:
-
-```ts
-create(input: { userId: number }) {
-  // create operation with initiatedByUserId
-}
-```
-
-### Estado mínimo esperado
-
-```ts
-{
+export type IngestionRecord = {
   id: string;
   status: 'created';
   initiatedByUserId: number;
+  payload: unknown;
   createdAt: Date;
-}
+  updatedAt: Date;
+};
 ```
 
-> [!IMPORTANT]
-> Este PR não tenta modelar o fluxo completo.
->
-> Ele só garante que a identidade autenticada entre corretamente no domínio.
+---
+
+## 8. Regras de Implementação
+
+O controller deve permanecer fino: aplicar o guard, ler `request.user.id` e delegar ao service. O service não deve conhecer a request HTTP, apenas receber `userId` e criar a operação com autoria mínima.
+
+O módulo de auth permanece como foundation já aprovada. Este PR não deve criar abstrações adicionais, não deve preparar próximos passos e não deve transformar o primeiro uso real da identidade em uma solução genérica antecipada.
 
 ---
 
-## 10. Regras de Implementação
+## 9. Critérios de Review
 
-### Controller
+O review deve validar se:
 
-- deve permanecer fino
-- lê `request.user.id`
-- delega ao service
-- não concentra regra de domínio
-
-### Service
-
-- recebe `userId` explicitamente
-- inicia a operação
-- registra autoria mínima
-
-### Auth
-
-- permanece isolado no módulo de auth
-- não deve ser reestruturado neste PR
-- não deve ser expandido para roles/scopes/decorators
-
-### Princípios
-
-- simplicidade
-- clareza
-- baixo acoplamento
-- sem abstração prematura
-- implementação pequena e revisável
+- a continuidade com a PR 06 está clara;
+- `ingestion` é usado como primeiro boundary funcional;
+- `request.user.id` é consumido de forma mínima;
+- o controller não concentra regra de domínio;
+- o service não depende da request HTTP;
+- a persistência de `initiatedByUserId` está objetiva;
+- não houve expansão indevida do auth;
+- não há abstração prematura ou granularidade desnecessária.
 
 ---
 
-## 11. Critérios de Review
+## 10. Critérios de Aceite
 
-O review deste PR deve validar se:
-
-- a continuidade com a PR 06 está clara
-- a escolha de `ingestion` como primeiro boundary faz sentido
-- `request.user.id` está sendo usado de forma mínima e correta
-- o controller continua fino
-- o service recebe `userId` explicitamente
-- a persistência mínima de autoria está correta
-- não houve expansão indevida de escopo
-- não surgiram abstrações novas sem segundo caso real
+- [ ] O endpoint de `ingestion` está protegido por `AuthGuard`.
+- [ ] `request.user.id` está acessível no controller.
+- [ ] `userId` é propagado explicitamente ao service.
+- [ ] A operação criada registra `initiatedByUserId`.
+- [ ] O service não recebe a request HTTP.
+- [ ] O módulo de auth não foi expandido.
+- [ ] O recorte permanece pequeno, funcional e revisável.
 
 ---
 
-## 12. Critérios de Aceite
+## 11. Conclusão
 
-Este PR pode ser considerado aceito se:
+A PR 07 é a continuação direta da PR 06. Ela não sofistica a foundation de auth nem reabre arquitetura já aprovada; apenas valida o primeiro uso real da identidade autenticada no domínio.
 
-- [ ] o endpoint de `ingestion` estiver protegido por `AuthGuard`
-- [ ] `request.user.id` estiver acessível no controller
-- [ ] `userId` for propagado explicitamente ao service
-- [ ] a operação criada registrar `initiatedByUserId`
-- [ ] não houver abstração prematura
-- [ ] não houver expansão indevida do auth
-- [ ] o recorte permanecer pequeno, funcional e revisável
-
----
-
-## 13. Conclusão
-
-Este PR é a continuação direta da PR 06.
-
-Ele não tenta sofisticar a foundation.
-
-Ele apenas valida o primeiro uso real da identidade autenticada no domínio.
-
-A escolha de `ingestion` é intencional porque ele é:
-
-- o ponto de entrada do pipeline
-- o lugar onde a operação nasce
-- o boundary mais natural para registrar autoria mínima
-
-Em resumo:
-
-> **PR 06 autenticou a borda.  
-> PR 07 começa a conectar essa identidade ao fluxo real da aplicação.**
+O ganho é pequeno e objetivo: a operação de `ingestion` passa a nascer associada ao usuário que a iniciou, mantendo simplicidade, baixo acoplamento e clareza de review.
