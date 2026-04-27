@@ -1,5 +1,4 @@
 # 🤖 PR 88 — Fase 2: Normalização Mínima do Input do Fluxo Avançado
-
 ## Higienização básica do payload válido antes da execução dos agents
 
 ---
@@ -7,23 +6,23 @@
 <div align="left">
 
 ![PR](https://img.shields.io/badge/PR-88-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
-![Tipo](https://img.shields.io/badge/Tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
-![Fase](https://img.shields.io/badge/Fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
-![Escopo](https://img.shields.io/badge/Escopo-normalizacao%20input-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
-![Status](https://img.shields.io/badge/Status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
+![Tipo](https://img.shields.io/badge/tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
+![Fase](https://img.shields.io/badge/fase-2-1d4ed8?style=for-the-badge&logo=dependabot&logoColor=white)
+![Escopo](https://img.shields.io/badge/escopo-normalizacao%20input-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
+![Status](https://img.shields.io/badge/status-pronto%20para%20review-16a34a?style=for-the-badge&logo=githubactions&logoColor=white)
 
 </div>
 
 ---
 
 > [!IMPORTANT]
-> Esta PR evolui a robustez operacional da fase avançada ao normalizar inputs válidos antes da orquestração.
+> Esta PR adiciona uma normalização mínima do input já válido antes da execução do fluxo avançado.
 >
-> - higieniza texto de entrada
-> - remove ruído estrutural simples
-> - preserva contrato atual em cenários válidos
+> - higieniza `statement` e alternativas com `trim`
+> - remove alternativas vazias após normalização
+> - preserva contrato, output e desenho atual do pipeline
 >
-> **Este PR não introduz validator global, pipe customizado, schema externo, novo agent ou redesign do pipeline.**
+> **Este PR não introduz validator global, pipe customizado, schema externo, novo agent ou redesign do fluxo avançado.**
 
 ## Sumário
 
@@ -39,44 +38,72 @@
 10. [Critérios de Aceite](#10-critérios-de-aceite)
 11. [Conclusão](#11-conclusão)
 
+---
+
 # 1. Síntese Executiva
 
-As PRs anteriores protegeram a fronteira de entrada do fluxo avançado. O próximo passo incremental é garantir que entradas válidas cheguem aos agents em formato minimamente limpo e previsível.
+A PR 87 consolidou a proteção mínima da fronteira do fluxo avançado, garantindo que apenas payloads compatíveis sigam para a execução dos agents. A PR 88 mantém essa decisão e adiciona o próximo passo mínimo: normalizar o input válido antes da orquestração.
 
-A PR 88 adiciona normalização simples no `AgentsFlowOrchestratorService`, reduzindo ruído sem alterar o comportamento funcional do pipeline.
+O objetivo não é ampliar validação nem sofisticar o pipeline. O recorte se limita a reduzir ruído estrutural simples em campos textuais, preservando o contrato atual e mantendo a execução dos agents sobre uma entrada mais previsível.
+
+Essa evolução continua a linha incremental da Fase 2: primeiro proteger a entrada, depois higienizar o que já foi aceito como válido, sem reabrir arquitetura ou deslocar regra simples para camadas prematuras.
+
+---
 
 # 2. Objetivo do PR
 
-- aplicar `trim` em `question.statement`
-- aplicar `trim` nas alternativas
-- remover alternativas vazias após normalização
-- entregar input consistente aos agents
-- preservar contrato atual em cenários válidos
+Esta PR tem como objetivo aplicar uma normalização mínima no payload válido recebido pelo fluxo avançado, antes da execução dos agents.
+
+Na prática, o PR deve:
+
+- aplicar `trim` em `question.statement`;
+- aplicar `trim` nos textos das alternativas;
+- remover alternativas vazias após a normalização;
+- entregar aos agents um input textual mais consistente;
+- preservar o comportamento atual em cenários válidos.
+
+---
 
 # 3. Decisão Arquitetural
 
-A normalização permanece no `AgentsFlowOrchestratorService`, na fronteira de entrada do fluxo avançado.
+A decisão arquitetural é manter a normalização dentro do `AgentsFlowOrchestratorService`, no ponto de entrada do fluxo avançado.
 
-A decisão é manter a higienização próxima do ponto de orquestração, sem deslocar regra simples para pipes, validators globais, schemas externos ou helpers prematuros.
+Esse posicionamento evita espalhar uma regra simples para pipes, validators globais, schemas externos ou helpers prematuros. A normalização pertence ao limite operacional do fluxo avançado porque atua sobre o payload já aceito e prepara apenas a entrada que será consumida pelos agents.
+
+A arquitetura aprovada permanece inalterada. O PR não adiciona nova camada, não cria foundation paralela e não redefine o contrato do pipeline.
+
+---
 
 # 4. Escopo
 
-- normalizar `statement`
-- normalizar textos das alternativas
-- remover entradas vazias após `trim`
-- executar antes dos agents
-- adicionar testes cobrindo a normalização
-- manter output de sucesso inalterado
+Entram neste PR apenas as mudanças necessárias para higienizar o input textual válido antes da execução dos agents:
+
+- normalização de `question.statement`;
+- normalização dos textos das alternativas;
+- remoção de alternativas vazias após `trim`;
+- aplicação da normalização antes da execução do fluxo avançado;
+- testes mínimos cobrindo o comportamento de normalização;
+- preservação do output final já existente.
+
+---
 
 # 5. Fora de Escopo
 
-- deduplicação de alternativas
-- validação semântica
-- correção gramatical
-- reordenação de alternativas
-- enriquecimento de payload
-- novo validator global
-- redesign do pipeline
+Ficam explicitamente fora deste PR:
+
+- deduplicação de alternativas;
+- validação semântica da questão;
+- correção gramatical;
+- reordenação de alternativas;
+- enriquecimento de payload;
+- alteração do contrato de resposta;
+- criação de validator global;
+- criação de pipe customizado;
+- criação de schema externo;
+- novo agent;
+- redesign do fluxo avançado.
+
+---
 
 # 6. Fluxo Arquitetural
 
@@ -101,27 +128,40 @@ A decisão é manter a higienização próxima do ponto de orquestração, sem d
   }
 }}%%
 flowchart LR
-    A["Input Válido"] --> B["Normalização"]
-    B --> C["Advanced Flow"]
-    C --> D["Agents Execution"]
-    D --> E["Output Final"]
+    A["Payload válido"] --> B["Normalização mínima"]
+    B --> C["Input higienizado"]
+    C --> D["Fluxo avançado"]
+    D --> E["Agents"]
+    E --> F["Output existente"]
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
     classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
     classDef step4 fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step5 fill:#25170f,stroke:#f97316,stroke-width:2px,color:#ffffff;
     classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
 
     class A step1;
     class B step2;
     class C step3;
     class D step4;
-    class E outputBox;
+    class E step5;
+    class F outputBox;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
 ```
+
+---
 
 # 7. Contratos Mínimos
 
-Sem alteração estrutural no output final:
+Não há alteração estrutural no contrato de saída do fluxo avançado.
+
+O output permanece no formato já esperado:
 
 ```ts
 {
@@ -133,37 +173,51 @@ Sem alteração estrutural no output final:
 }
 ```
 
-A PR adiciona apenas higienização interna do input antes da execução do fluxo.
+A mudança ocorre apenas no input interno entregue aos agents. O payload válido é higienizado antes da execução, mas o contrato externo do fluxo não é expandido.
+
+---
 
 # 8. Regras de Implementação
 
-- concentrar normalização no `AgentsFlowOrchestratorService`
-- executar antes de qualquer agent
-- manter transformação simples e explícita
-- não adicionar schema externo ou pipe customizado
-- não criar helper global prematuro
-- não alterar fluxo de sucesso
+A implementação deve manter a normalização simples, explícita e localizada no `AgentsFlowOrchestratorService`.
+
+A regra central é preparar o input antes de qualquer agent ser executado, sem deslocar a responsabilidade para uma abstração maior do que o recorte exige. O código deve permanecer fácil de revisar, sem helper global, sem schema externo, sem pipe customizado e sem acoplamento com etapas futuras.
+
+O fluxo de sucesso existente deve ser preservado. A normalização não deve introduzir comportamento novo além da higienização textual mínima definida no escopo.
+
+---
 
 # 9. Critérios de Review
 
-- trims aplicados corretamente
-- alternativas vazias removidas
-- agents recebem input normalizado
-- fluxo válido permanece igual
-- recorte pequeno foi mantido
-- não há overengineering ou reestruturação indevida
+O review deve validar se:
+
+- `statement` recebe `trim` corretamente;
+- alternativas recebem `trim` corretamente;
+- alternativas vazias após normalização são removidas;
+- a normalização ocorre antes da execução dos agents;
+- o output de sucesso permanece inalterado;
+- o recorte continua pequeno e aderente à Fase 2;
+- não houve criação de abstração prematura;
+- não houve redesign do fluxo avançado;
+- a PR preserva o padrão visual e textual das PRs anteriores.
+
+---
 
 # 10. Critérios de Aceite
 
-- [ ] `statement` é normalizado
-- [ ] alternativas são normalizadas
-- [ ] entradas vazias são removidas
-- [ ] fluxo válido preserva o comportamento atual
-- [ ] output de sucesso permanece inalterado
-- [ ] suíte permanece verde
+- [ ] `question.statement` é normalizado antes da execução dos agents.
+- [ ] Textos das alternativas são normalizados antes da execução dos agents.
+- [ ] Alternativas vazias após `trim` são removidas.
+- [ ] O fluxo válido preserva o comportamento funcional atual.
+- [ ] O output final permanece estruturalmente inalterado.
+- [ ] Não há validator global, pipe customizado ou schema externo novo.
+- [ ] Testes mínimos cobrem a normalização prevista.
+- [ ] A suíte permanece verde.
+
+---
 
 # 11. Conclusão
 
-A PR 88 evolui a qualidade do fluxo avançado no ponto correto: a fronteira de entrada do orchestrator.
+A PR 88 melhora a previsibilidade do fluxo avançado sem ampliar sua arquitetura.
 
-Sem ampliar arquitetura ou contrato, o pipeline passa a operar com inputs mais consistentes antes de acionar os agents.
+O slice mantém a sequência natural da Fase 2: após proteger a entrada, normaliza o payload válido no ponto de orquestração. A entrega permanece pequena, revisável e limitada à higienização mínima necessária antes da execução dos agents.
