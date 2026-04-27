@@ -98,21 +98,31 @@ Evita-se pulverizar logs dentro dos agents, duplicar responsabilidade operaciona
   "flowchart": {
     "htmlLabels": true,
     "curve": "linear",
-    "nodeSpacing": 40,
-    "rankSpacing": 55
+    "nodeSpacing": 54,
+    "rankSpacing": 64
   }
 }}%%
-flowchart LR
-    A["Início da Etapa"] --> B["Registrar Log de Início"]
-    B --> C["Executar Agent"]
-    C --> D{"Falha na Etapa?"}
-    D -->|Não| E["Registrar Log de Sucesso"]
-    E --> F["Calcular Duração da Etapa"]
-    F --> G["Avançar para Próxima Etapa"]
-    G --> H["Finalizar Output do Fluxo"]
+flowchart TD
+    A["<div style='min-width:160px; padding:8px 12px;'>Início<br/>da Etapa</div>"]
+    B["<div style='min-width:180px; padding:8px 12px;'>Log<br/>de Início</div>"]
+    C["<div style='min-width:170px; padding:8px 12px;'>Executar<br/>Agent</div>"]
+    D{"<div style='min-width:160px; padding:8px 12px;'>Falha<br/>na Etapa?</div>"}
+    E["<div style='min-width:180px; padding:8px 12px;'>Log<br/>de Sucesso</div>"]
+    F["<div style='min-width:190px; padding:8px 12px;'>Calcular<br/>Duração</div>"]
+    G["<div style='min-width:190px; padding:8px 12px;'>Próxima<br/>Etapa</div>"]
+    H["<div style='min-width:180px; padding:8px 12px;'>Output<br/>Final</div>"]
+    I["<div style='min-width:180px; padding:8px 12px;'>Log<br/>de Falha</div>"]
+    J["<div style='min-width:190px; padding:8px 12px;'>Erro<br/>Controlado</div>"]
 
-    D -->|Sim| I["Registrar Log de Falha"]
-    I --> J["Lançar Erro Controlado"]
+    A --> B
+    B --> C
+    C --> D
+    D -->|Não| E
+    E --> F
+    F --> G
+    G --> H
+    D -->|Sim| I
+    I --> J
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
@@ -134,6 +144,14 @@ flowchart LR
     class J failureBox;
 
     linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 3 stroke:#84cc16,stroke-width:2px;
+    linkStyle 4 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 5 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 6 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 7 stroke:#fb7185,stroke-width:2px;
+    linkStyle 8 stroke:#fb7185,stroke-width:2px;
 ```
 
 # 7. Contratos Mínimos
