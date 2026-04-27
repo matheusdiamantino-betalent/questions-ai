@@ -17,11 +17,11 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR evolui a observabilidade operacional do fluxo avançado ao registrar a execução de cada etapa com contexto mínimo e padronização.
+> Esta PR adiciona logs estruturados por etapa no fluxo avançado, ampliando a observabilidade sem alterar comportamento funcional.
 >
-> - registra início e fim por etapa
-> - adiciona duração simples da execução
-> - preserva contrato atual em cenários válidos
+> - registra início, sucesso e falha por etapa
+> - inclui duração simples da execução
+> - preserva contrato atual de sucesso
 >
 > **Este PR não introduz tracing distribuído, OpenTelemetry, dashboards, APM externo, novo agent ou redesign do pipeline.**
 
@@ -41,34 +41,34 @@
 
 # 1. Síntese Executiva
 
-Após consolidar guardrails, normalização e tratamento de falhas, o próximo passo incremental é ampliar a visibilidade operacional da execução do fluxo avançado.
+Após consolidar guardrails, normalização e tratamento controlado de falhas, o próximo passo mínimo é melhorar a leitura operacional da execução do pipeline.
 
-A PR 90 adiciona logs estruturados no `AgentsFlowOrchestratorService`, permitindo identificar início, sucesso, falha e duração de cada etapa sem alterar a lógica funcional do pipeline.
+A PR 90 instrumenta o `AgentsFlowOrchestratorService` para expor eventos essenciais de cada etapa, reduzindo esforço de diagnóstico e mantendo o fluxo válido inalterado.
 
 # 2. Objetivo do PR
 
-- registrar início de cada etapa
-- registrar sucesso de cada etapa
+- registrar início de execução por etapa
+- registrar conclusão com sucesso
 - registrar falha com contexto mínimo
-- medir duração por etapa
-- correlacionar a execução por identificador
-- preservar contrato atual em cenários válidos
+- medir duração da etapa
+- incluir identificador de correlação
+- manter contrato atual de sucesso
 
 # 3. Decisão Arquitetural
 
-A instrumentação permanece no `AgentsFlowOrchestratorService`, ponto central de coordenação do fluxo avançado.
+A observabilidade permanece centralizada no `AgentsFlowOrchestratorService`, onde a ordem de execução já é conhecida e controlada.
 
-A decisão evita espalhar logs excessivos dentro dos agents e mantém a observabilidade concentrada onde a sequência do pipeline já é orquestrada.
+Evita-se pulverizar logs dentro dos agents, duplicar responsabilidade operacional ou introduzir infraestrutura além do slice atual.
 
 # 4. Escopo
 
 - logar início da etapa
-- logar conclusão da etapa
-- logar erro da etapa
-- incluir tempo de execução
-- incluir identificador de correlação
-- adicionar testes do comportamento esperado
-- manter output de sucesso inalterado
+- logar sucesso da etapa
+- logar falha da etapa
+- incluir duração simples
+- incluir correlação da execução
+- adicionar testes objetivos
+- preservar output atual
 
 # 5. Fora de Escopo
 
@@ -77,61 +77,67 @@ A decisão evita espalhar logs excessivos dentro dos agents e mantém a observab
 - dashboards
 - métricas avançadas
 - alertas automáticos
-- integração com APM externo
-- redesign do pipeline
+- integração APM
+- refatoração ampla do pipeline
 
 # 6. Fluxo Arquitetural
 
 ```mermaid
-%%{init:{
-"theme":"base",
-"themeVariables":{
-"background":"#050b16",
-"primaryColor":"#0b1220",
-"primaryTextColor":"#ffffff",
-"primaryBorderColor":"#22d3ee",
-"lineColor":"#94a3b8",
-"secondaryColor":"#0b1220",
-"tertiaryColor":"#0b1220",
-"fontFamily":"Inter, Arial, sans-serif"
-},
-"flowchart":{"curve":"linear","nodeSpacing":34,"rankSpacing":44}
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
 }}%%
 flowchart LR
-A["Início"] --> B["Log Início"]
-B --> C["Executa Etapa"]
-C --> D{"Erro?"}
-D -->|Não| E["Log Sucesso"]
-E --> F["Tempo Etapa"]
-F --> G["Próxima Etapa"]
-G --> H["Output Final"]
-D -->|Sim| I["Log Falha"]
-I --> J["Erro Controlado"]
+    A["Iniciar Etapa"] --> B["Log de Início"]
+    B --> C["Executar Agent"]
+    C --> D{"Falhou?"}
+    D -->|Não| E["Log de Sucesso"]
+    E --> F["Registrar Duração"]
+    F --> G["Próxima Etapa"]
+    G --> H["Output Final"]
+    D -->|Sim| I["Log de Falha"]
+    I --> J["Erro Controlado"]
 
-classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
-classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
-classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
-classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
-classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
-classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
-classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
 
-class A step1;
-class B step2;
-class C step3;
-class D decision;
-class E successBox;
-class F step2;
-class G step3;
-class H outputBox;
-class I failureBox;
-class J failureBox;
+    class A step1;
+    class B step2;
+    class C step3;
+    class D decision;
+    class E successBox;
+    class F step2;
+    class G step3;
+    class H outputBox;
+    class I failureBox;
+    class J failureBox;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
 ```
-
 
 # 7. Contratos Mínimos
 
-Sem alteração estrutural no output final:
+Sem alteração estrutural no output final existente.
 
 ```ts
 {
@@ -143,38 +149,35 @@ Sem alteração estrutural no output final:
 }
 ```
 
-A PR adiciona apenas telemetria operacional do fluxo interno.
+A PR adiciona somente telemetria operacional interna.
 
 # 8. Regras de Implementação
 
-- concentrar logs no `AgentsFlowOrchestratorService`
-- manter mensagens objetivas e consistentes
-- evitar duplicidade de logs
+- concentrar logs no orchestrator
+- mensagens objetivas e padronizadas
+- evitar duplicidade de eventos
 - medir duração com baixo acoplamento
 - não adicionar dependências externas
-- não alterar fluxo de sucesso
+- não alterar caminho de sucesso
 
 # 9. Critérios de Review
 
-- início de etapa é logado
-- sucesso de etapa é logado
-- falha de etapa é logada
-- duração é registrada
+- início da etapa é registrado
+- sucesso da etapa é registrado
+- falha da etapa é registrada
+- duração é capturada
 - fluxo válido permanece igual
-- recorte pequeno foi mantido
-- não há overengineering ou reestruturação indevida
+- recorte segue pequeno e claro
 
 # 10. Critérios de Aceite
 
 - [ ] cada etapa registra início
 - [ ] cada etapa registra sucesso ou falha
-- [ ] duração é capturada
+- [ ] duração da etapa é capturada
 - [ ] correlação da execução está disponível
 - [ ] output de sucesso permanece inalterado
 - [ ] suíte permanece verde
 
 # 11. Conclusão
 
-A PR 90 evolui a maturidade operacional do fluxo avançado no ponto correto: a orquestração central.
-
-Sem ampliar arquitetura ou contrato, o pipeline passa a oferecer visibilidade real da execução de cada etapa, reduzindo tempo de diagnóstico e aumentando previsibilidade operacional.
+A PR 90 amplia a observabilidade no ponto correto da arquitetura. O pipeline passa a expor eventos essenciais de execução por etapa, com ganho real de diagnóstico e sem expansão indevida de escopo.
