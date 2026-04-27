@@ -98,20 +98,21 @@ Evita-se pulverizar logs dentro dos agents, duplicar responsabilidade operaciona
   "flowchart": {
     "htmlLabels": true,
     "curve": "linear",
-    "nodeSpacing": 34,
-    "rankSpacing": 44
+    "nodeSpacing": 40,
+    "rankSpacing": 55
   }
 }}%%
 flowchart LR
-    A["Iniciar Etapa"] --> B["Log de Início"]
+    A["Início da Etapa"] --> B["Registrar Log de Início"]
     B --> C["Executar Agent"]
-    C --> D{"Falhou?"}
-    D -->|Não| E["Log de Sucesso"]
-    E --> F["Registrar Duração"]
-    F --> G["Próxima Etapa"]
-    G --> H["Output Final"]
-    D -->|Sim| I["Log de Falha"]
-    I --> J["Erro Controlado"]
+    C --> D{"Falha na Etapa?"}
+    D -->|Não| E["Registrar Log de Sucesso"]
+    E --> F["Calcular Duração da Etapa"]
+    F --> G["Avançar para Próxima Etapa"]
+    G --> H["Finalizar Output do Fluxo"]
+
+    D -->|Sim| I["Registrar Log de Falha"]
+    I --> J["Lançar Erro Controlado"]
 
     classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
     classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
