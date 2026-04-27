@@ -17,108 +17,141 @@
 ---
 
 > [!IMPORTANT]
-> Esta PR evolui a robustez operacional do fluxo avançado ao tratar falhas de execução dos agents com previsibilidade e rastreabilidade.
+> Esta PR adiciona tratamento mínimo e centralizado de falhas no fluxo avançado, tornando erros internos mais previsíveis e revisáveis.
 >
-> - captura erro por etapa
-> - registra contexto mínimo da falha
-> - preserva comportamento atual em cenários válidos
+> - identifica a etapa que falhou
+> - registra contexto operacional mínimo
+> - preserva contrato de sucesso atual
 >
-> **Este PR não introduz retry, fallback, fila, circuit breaker, novo agent ou redesign da orquestração.**
+> **Este PR não introduz retry, fallback, fila, circuit breaker, paralelismo ou redesign da orquestração.**
 
 ## Sumário
 
-1. Síntese Executiva
-2. Objetivo do PR
-3. Decisão Arquitetural
-4. Escopo
-5. Fora de Escopo
-6. Fluxo Arquitetural
-7. Contratos Mínimos
-8. Regras de Implementação
-9. Critérios de Review
-10. Critérios de Aceite
-11. Conclusão
+1. [Síntese Executiva](#1-síntese-executiva)
+2. [Objetivo do PR](#2-objetivo-do-pr)
+3. [Decisão Arquitetural](#3-decisão-arquitetural)
+4. [Escopo](#4-escopo)
+5. [Fora de Escopo](#5-fora-de-escopo)
+6. [Fluxo Arquitetural](#6-fluxo-arquitetural)
+7. [Contratos Mínimos](#7-contratos-mínimos)
+8. [Regras de Implementação](#8-regras-de-implementação)
+9. [Critérios de Review](#9-critérios-de-review)
+10. [Critérios de Aceite](#10-critérios-de-aceite)
+11. [Conclusão](#11-conclusão)
 
 # 1. Síntese Executiva
 
-Após proteger a entrada do fluxo, o próximo passo incremental é tornar falhas internas dos agents observáveis e controladas. Hoje, erros internos tendem a emergir sem contexto suficiente.
+Após a normalização de entrada da PR anterior, o próximo passo mínimo é qualificar a forma como o pipeline reage a erros internos. Falhas continuam possíveis, mas deixam de emergir sem contexto útil.
 
-A PR 89 adiciona tratamento mínimo no orchestrator para identificar a etapa que falhou e responder de forma explícita.
+A PR 89 concentra no orchestrator a identificação da etapa com erro e a emissão de resposta previsível, mantendo o fluxo feliz inalterado.
 
 # 2. Objetivo do PR
 
-- capturar erro por agent
-- identificar etapa com falha
-- registrar contexto mínimo em log
-- retornar erro previsível
-- preservar fluxo feliz atual
+- capturar exceções por etapa executada
+- anexar identificação da etapa ao erro
+- registrar contexto essencial em log
+- manter saída de sucesso atual
+- cobrir cenário de falha com testes
 
 # 3. Decisão Arquitetural
 
-O tratamento permanece concentrado no `AgentsFlowOrchestratorService`, ponto natural de coordenação do pipeline.
+O tratamento permanece no `AgentsFlowOrchestratorService`, que já coordena a sequência operacional. O ponto de coordenação continua sendo o local correto para encapsular erro de etapa.
 
-Evita-se espalhar `try/catch` entre agents ou criar camadas prematuras de resiliência.
+Evita-se espalhar `try/catch` nos agents, criar wrappers genéricos ou antecipar camadas de resiliência fora do recorte atual.
 
 # 4. Escopo
 
-- envolver execução de cada etapa com tratamento mínimo
-- anexar nome da etapa ao erro
-- logar falha com contexto essencial
-- manter sucesso inalterado
-- adicionar testes do cenário de erro
+- tratar falha durante execução de cada etapa
+- informar etapa associada ao erro
+- registrar contexto mínimo
+- preservar caminho de sucesso
+- adicionar testes objetivos de erro
 
 # 5. Fora de Escopo
 
 - retry automático
 - fallback entre providers
-- compensação transacional
+- DLQ
 - circuit breaker
 - métricas avançadas
-- paralelismo
-- redesign do pipeline
+- compensações
+- refatoração ampla do pipeline
 
 # 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
+}}%%
 flowchart LR
-A[Start] --> B[Run Agent]
-B --> C{Erro?}
-C -->|Não| D[Próxima Etapa]
-C -->|Sim| E[Log Contexto]
-E --> F[Throw Controlled Error]
-D --> G[Output Final]
+    A["Executar Etapa"] --> B{"Erro?"}
+    B -->|Não| C["Próxima Etapa"]
+    B -->|Sim| D["Log Contexto"]
+    D --> E["Erro Controlado"]
+    C --> F["Output Final"]
+
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+    classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+    classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B decision;
+    class C step2;
+    class D step2;
+    class E failureBox;
+    class F outputBox;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
 ```
 
 # 7. Contratos Mínimos
 
-Sem alteração no contrato de sucesso.
+Sem alteração no contrato de sucesso existente.
 
-Em erro, resposta passa a conter mensagem previsível com referência da etapa.
+Em cenários de falha, a resposta expõe mensagem previsível contendo a referência da etapa afetada, sem ampliar payload além do necessário.
 
 # 8. Regras de Implementação
 
 - centralizar tratamento no orchestrator
-- manter mensagens objetivas
-- não alterar interfaces dos agents sem necessidade
-- não adicionar abstrações novas
-- preservar recorte pequeno
+- mensagens objetivas e consistentes
+- não alterar contratos dos agents sem necessidade real
+- não criar abstrações genéricas prematuras
+- manter implementação simples e rastreável
 
 # 9. Critérios de Review
 
-- falha identifica etapa correta
-- erro é rastreável
-- sucesso permanece igual
-- testes verdes
-- sem overengineering
+- etapa com erro é identificada corretamente
+- logs contêm contexto mínimo útil
+- caminho de sucesso permanece intacto
+- testes cobrem cenário de falha
+- recorte continua pequeno e aderente
 
 # 10. Critérios de Aceite
 
-- [ ] erro em agent informa etapa
+- [ ] erro em agent informa a etapa correspondente
 - [ ] falha gera log mínimo
-- [ ] fluxo válido inalterado
-- [ ] suíte verde
-- [ ] recorte pequeno mantido
+- [ ] contrato de sucesso permanece igual
+- [ ] suíte permanece verde
+- [ ] não houve expansão indevida do escopo
 
 # 11. Conclusão
 
-A PR 89 adiciona maturidade operacional ao fluxo avançado: quando um agent falhar, o sistema falha melhor — com contexto, previsibilidade e sem ampliar arquitetura.
+A PR 89 melhora a confiabilidade operacional no ponto correto: quando uma etapa falha, o sistema responde com contexto suficiente e comportamento previsível, sem inflar arquitetura nem alterar o fluxo válido.
