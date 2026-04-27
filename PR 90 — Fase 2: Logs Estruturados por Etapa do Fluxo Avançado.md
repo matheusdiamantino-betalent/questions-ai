@@ -83,17 +83,51 @@ A decisão evita espalhar logs excessivos dentro dos agents e mantém a observab
 # 6. Fluxo Arquitetural
 
 ```mermaid
+%%{init:{
+"theme":"base",
+"themeVariables":{
+"background":"#050b16",
+"primaryColor":"#0b1220",
+"primaryTextColor":"#ffffff",
+"primaryBorderColor":"#22d3ee",
+"lineColor":"#94a3b8",
+"secondaryColor":"#0b1220",
+"tertiaryColor":"#0b1220",
+"fontFamily":"Inter, Arial, sans-serif"
+},
+"flowchart":{"curve":"linear","nodeSpacing":34,"rankSpacing":44}
+}}%%
 flowchart LR
-    A[Inicio] --> B[Log Inicio]
-    B --> C[Executa Etapa]
-    C --> D{Erro}
-    D -->|Nao| E[Log Sucesso]
-    E --> F[Tempo Etapa]
-    F --> G[Proxima Etapa]
-    G --> H[Output Final]
-    D -->|Sim| I[Log Falha]
-    I --> J[Erro Controlado]
+A["Início"] --> B["Log Início"]
+B --> C["Executa Etapa"]
+C --> D{"Erro?"}
+D -->|Não| E["Log Sucesso"]
+E --> F["Tempo Etapa"]
+F --> G["Próxima Etapa"]
+G --> H["Output Final"]
+D -->|Sim| I["Log Falha"]
+I --> J["Erro Controlado"]
+
+classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+classDef step2 fill:#0a1a22,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+classDef step3 fill:#201d10,stroke:#eab308,stroke-width:2px,color:#ffffff;
+classDef decision fill:#181629,stroke:#a78bfa,stroke-width:2px,color:#ffffff;
+classDef successBox fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+classDef failureBox fill:#2a160f,stroke:#fb7185,stroke-width:2px,color:#ffffff;
+classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+class A step1;
+class B step2;
+class C step3;
+class D decision;
+class E successBox;
+class F step2;
+class G step3;
+class H outputBox;
+class I failureBox;
+class J failureBox;
 ```
+
 
 # 7. Contratos Mínimos
 
