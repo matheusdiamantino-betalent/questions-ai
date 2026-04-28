@@ -1,12 +1,11 @@
-# 🤖 PR 87 — Fase 2: Guardrails Estruturais das Alternativas
-
+# 🤖 PR 96 — Fase 2: Guardrails Estruturais das Alternativas
 ## Validação mínima das alternativas antes da execução do fluxo avançado
 
 ---
 
 <div align="left">
 
-![PR](https://img.shields.io/badge/PR-87-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
+![PR](https://img.shields.io/badge/PR-96-2563eb?style=for-the-badge&logo=gitpullrequest&logoColor=white)
 ![Tipo](https://img.shields.io/badge/Tipo-feature%20slice-7c3aed?style=for-the-badge&logo=nestjs&logoColor=white)
 ![Fase](https://img.shields.io/badge/Fase-2-0f766e?style=for-the-badge&logo=dependabot&logoColor=white)
 ![Escopo](https://img.shields.io/badge/Escopo-guardrails%20alternativas-0891b2?style=for-the-badge&logo=serverless&logoColor=white)
@@ -43,7 +42,9 @@
 
 A PR 86 consolidou os primeiros guardrails de entrada do fluxo avançado, rejeitando payloads sem `statement` utilizável ou sem `alternatives` como array antes da execução dos agents.
 
-A PR 87 avança no mesmo eixo, ainda sem ampliar arquitetura, adicionando validação estrutural mínima sobre o conteúdo das alternativas. O objetivo é impedir que o fluxo avançado seja iniciado quando a lista de alternativas, embora presente como array, não possui condições mínimas de uso para processamento posterior.
+A PR 96 avança no mesmo eixo, ainda sem ampliar arquitetura, adicionando validação estrutural mínima sobre o conteúdo das alternativas. O objetivo é impedir que o fluxo avançado seja iniciado quando a lista de alternativas, embora presente como array, não possui condições mínimas de uso para processamento posterior.
+
+O recorte permanece intencionalmente pequeno: validar a presença útil das alternativas, falhar cedo em cenários inválidos e preservar integralmente o fluxo de sucesso já existente.
 
 # 2. Objetivo do PR
 
@@ -197,6 +198,6 @@ A PR adiciona apenas falha antecipada para listas de alternativas estruturalment
 
 # 11. Conclusão
 
-A PR 87 conclui mais uma etapa mínima de robustez na entrada do fluxo avançado, complementando a proteção introduzida pela PR 86.
+A PR 96 conclui mais uma etapa mínima de robustez na entrada do fluxo avançado, complementando a proteção introduzida pela PR 86.
 
 Sem ampliar arquitetura ou contrato, o pipeline passa a rejeitar listas de alternativas estruturalmente inválidas antes de acionar os agents, reduzindo processamento desnecessário e mantendo falhas de entrada previsíveis, localizadas e proporcionais ao recorte atual.
