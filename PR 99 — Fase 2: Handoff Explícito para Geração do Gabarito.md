@@ -82,11 +82,43 @@ Não há novo service, helper global ou mudança de ownership. O orchestrator co
 # 6. Fluxo Arquitetural
 
 ```mermaid
-%%{init: {"theme":"base"}}%%
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#050b16",
+    "primaryColor": "#0b1220",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#22d3ee",
+    "lineColor": "#94a3b8",
+    "secondaryColor": "#0b1220",
+    "tertiaryColor": "#0b1220",
+    "fontFamily": "Inter, Arial, sans-serif"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "linear",
+    "nodeSpacing": 34,
+    "rankSpacing": 44
+  }
+}}%%
 flowchart LR
     A["InitialQuestionProcessingResult"] --> B["buildAnswerKeyInput()"]
     B --> C["AnswerKeyAgent"]
     C --> D["Final Output"]
+
+    classDef step1 fill:#0b1325,stroke:#3b82f6,stroke-width:2px,color:#ffffff;
+    classDef foundationBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+    classDef step6 fill:#112015,stroke:#84cc16,stroke-width:2px,color:#ffffff;
+    classDef outputBox fill:#1e293b,stroke:#f8fafc,stroke-width:2px,color:#ffffff;
+
+    class A step1;
+    class B foundationBox;
+    class C step6;
+    class D outputBox;
+
+    linkStyle 0 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 1 stroke:#9ca3af,stroke-width:2px;
+    linkStyle 2 stroke:#9ca3af,stroke-width:2px;
 ```
 
 # 7. Contratos Mínimos
